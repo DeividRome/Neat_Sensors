@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Neat Pulse API - Monitor de salas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#E6ECF5;
+  --ink:#0A1224;
+  --muted:#4A5468;
+  --blue:#043172;
+  --blue-3:#6FA8FF;
+  --cyan:#50E4FE;
+  --ok:#2FBF7E;
+  --warn:#F2B441;
+  --bad:#E5484D;
+  --gray:#8A95A6;
+  --sh-d:#C3CDDD;
+  --sh-l:#FFFFFF;
+  --raised:8px 8px 16px var(--sh-d), -8px -8px 16px var(--sh-l);
+  --raised-sm:5px 5px 10px var(--sh-d), -5px -5px 10px var(--sh-l);
+  --raised-xs:3px 3px 6px var(--sh-d), -3px -3px 6px var(--sh-l);
+  --inset:inset 5px 5px 10px var(--sh-d), inset -5px -5px 10px var(--sh-l);
+  --r:18px;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif}
+h1,h2,h3{font-family:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;margin:0;letter-spacing:-.01em}
+button{font:inherit;color:inherit}
+
+.app{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100dvh}
+
+/* Menú lateral */
+.side{position:sticky;top:0;height:100dvh;padding:32px 24px;display:flex;flex-direction:column;gap:36px}
+.brand{display:grid;gap:2px;justify-items:center;text-align:center}
+.logo{display:flex;justify-content:center}
+.api-badge{display:inline-flex;align-items:center;justify-self:center;min-height:40px;padding:0 18px;border-radius:999px;box-shadow:var(--inset);font:600 16px 'Space Grotesk',system-ui,sans-serif;color:var(--blue)}
+.brand-sub{margin:6px 0 0;color:var(--muted);font-size:14px}
+.logo svg{height:34px;width:auto;display:block;fill:var(--blue)}
+.nav{display:flex;flex-direction:column;gap:14px;padding:6px}
+.nav a{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 18px;border-radius:999px;color:var(--ink);text-decoration:none;font:600 15px 'Space Grotesk',system-ui,sans-serif;transition:box-shadow 240ms var(--ease),color 240ms var(--ease)}
+.nav a:hover{box-shadow:var(--raised-sm)}
+.nav a[aria-current="page"]{box-shadow:var(--inset);color:var(--blue)}
+.nav a:focus-visible,.btn:focus-visible,.seg button:focus-visible,.switch:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.ico{width:20px;height:20px;flex:none}
+.side,.main-col{min-width:0}
+.source{margin-top:auto;color:var(--muted);font-size:14px;text-align:center}
+
+
+/* Contenido */
+.main{padding:32px 40px 56px;max-width:1360px;width:100%}
+.head{display:flex;flex-wrap:wrap;gap:20px 32px;justify-content:space-between;align-items:flex-end;margin-bottom:12px}
+h1{font-size:32px;line-height:1.15;font-weight:600}
+.desc{margin:6px 0 0;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center}
+.status{margin:0 0 28px;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.tag{display:inline-block;padding:3px 14px;border-radius:999px;box-shadow:var(--inset);font:600 13px 'Space Grotesk',system-ui,sans-serif;color:var(--muted)}
+
+/* Botones y controles neumórficos */
+.btn{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 22px;border:0;border-radius:999px;background:var(--bg);box-shadow:var(--raised-sm);font:600 14px 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:box-shadow 150ms var(--ease)}
+.btn:active{box-shadow:var(--inset)}
+.btn[aria-busy="true"] .ico{animation:spin 900ms linear infinite}
+.live{width:10px;height:10px;border-radius:50%;background:var(--cyan);flex:none;animation:pulse 2.4s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(80,228,254,.55)}100%{box-shadow:0 0 0 9px rgba(80,228,254,0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Selector de salas */
+.picker{position:relative}
+.panel{position:absolute;right:0;top:calc(100% + 14px);z-index:30;width:min(320px,calc(100vw - 32px));max-height:min(70vh,460px);overflow:auto;padding:20px;border-radius:var(--r);background:var(--bg);box-shadow:var(--raised)}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px}
+.panel-head strong{font:600 16px 'Space Grotesk',system-ui,sans-serif}
+.panel ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.panel-actions{margin-top:14px;display:flex;justify-content:flex-end}
+.check{display:flex;align-items:center;gap:14px;min-height:44px;cursor:pointer;position:relative;padding:0 4px}
+.check input{position:absolute;opacity:0;width:24px;height:24px;margin:0;left:4px;cursor:pointer}
+.check .box{width:24px;height:24px;border-radius:8px;box-shadow:var(--inset);flex:none;position:relative;transition:background 240ms var(--ease),box-shadow 240ms var(--ease)}
+.check input:checked + .box{background:var(--blue);box-shadow:var(--raised-xs)}
+.check input:checked + .box::after{content:'';position:absolute;left:8px;top:3px;width:6px;height:12px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.check input:focus-visible + .box{outline:3px solid var(--blue);outline-offset:3px}
+.check input:disabled{cursor:not-allowed}
+.check input:disabled + .box{opacity:.55}
+.check .lbl{font-weight:500;min-width:0;overflow-wrap:anywhere;line-height:1.3}
+.check{padding-top:6px;padding-bottom:6px}
+.auto{display:inline-flex;align-items:center;gap:12px;min-height:44px;font-size:14px;font-weight:500;color:var(--muted)}
+.switch{width:56px;height:32px;border:0;border-radius:999px;background:var(--bg);box-shadow:var(--inset);position:relative;cursor:pointer;padding:0;flex:none}
+.switch .knob{position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:var(--bg);box-shadow:var(--raised-xs);transition:transform 240ms var(--ease),background 240ms var(--ease)}
+.switch[aria-checked="true"] .knob{transform:translateX(24px);background:var(--blue)}
+
+.seg{display:inline-flex;gap:4px;padding:6px;border-radius:999px;box-shadow:var(--inset)}
+.seg button{min-height:44px;padding:0 18px;border:0;border-radius:999px;background:transparent;font:600 14px 'Space Grotesk',system-ui,sans-serif;color:var(--muted);cursor:pointer;transition:box-shadow 240ms var(--ease),color 240ms var(--ease)}
+.seg button[aria-pressed="true"]{background:var(--bg);box-shadow:var(--raised-xs);color:var(--blue)}
+
+/* Tarjetas */
+.card{background:var(--bg);border-radius:var(--r);box-shadow:var(--raised);padding:24px}
+.card h2{font-size:20px;font-weight:600}
+.card h3{font-size:20px;font-weight:600}
+.sub{margin:4px 0 16px;color:var(--muted);font-size:14px}
+.stack{display:grid;gap:28px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px}
+.kpis.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.kl{color:var(--muted);font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px}
+.kv{font:600 40px/1.1 'Space Grotesk',system-ui,sans-serif;margin:10px 0 4px;font-variant-numeric:tabular-nums}
+.kv small{font-size:18px;color:var(--muted);font-weight:500;margin-left:4px}
+.kc{color:var(--muted);font-size:14px}
+.charts{display:grid;grid-template-columns:1.25fr 1.25fr 1fr;gap:28px}
+.chart{position:relative;height:260px}
+.chart.tall{height:340px}
+.section-title{font-size:22px;font-weight:600;margin:0 0 -8px}
+.section-title:not(:first-child){margin-top:16px}
+
+/* Cartas de sala */
+.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:28px}
+.room header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:6px 12px}
+.room h3{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;line-height:1.25}
+.room header .state{flex:none}
+.room .meta{margin:4px 0 18px;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.room-body{display:flex;align-items:center;gap:20px}
+.well{width:88px;height:88px;border-radius:50%;box-shadow:var(--inset);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
+.well b{font:600 32px/1 'Space Grotesk',system-ui,sans-serif;color:var(--blue);font-variant-numeric:tabular-nums}
+.well.empty b{color:var(--muted)}
+.well span{font-size:13px;color:var(--muted)}
+.room dl{margin:0;display:grid;gap:10px;flex:1;min-width:0}
+.room dl div{display:block}
+.room dt{color:var(--muted);font-size:14px;line-height:1.2}
+.room dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chips{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.chips li{padding:4px 12px;border-radius:999px;box-shadow:var(--inset);font-size:13px;font-weight:600}
+.legend ul{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:12px;font-size:14px;color:var(--muted)}
+.legend li{display:flex;gap:12px;align-items:baseline}
+.legend li .state{min-width:76px}
+
+/* Estados con texto + punto */
+.state{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;color:var(--ink);white-space:nowrap}
+.state i{width:10px;height:10px;border-radius:50%;flex:none;background:var(--ok)}
+.state.warn i{background:var(--warn)}
+.state.bad i{background:var(--bad)}
+.state.na i{background:var(--gray)}
+
+/* Tablas */
+.tablewrap{overflow-x:auto;margin-top:12px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{text-align:left;color:var(--muted);font-size:14px;font-weight:600;padding:10px 12px;white-space:nowrap}
+td{padding:14px 12px;border-top:1px solid rgba(10,18,36,.08);vertical-align:middle}
+th.num,td.num{text-align:right}
+.muted{color:var(--muted);font-size:14px}
+
+.notice{box-shadow:var(--inset);border-radius:var(--r);padding:16px 20px;margin-bottom:24px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.empty{color:var(--muted);padding:24px 4px}
+.chart .empty{display:flex;align-items:center;justify-content:center;height:100%;text-align:center;box-shadow:var(--inset);border-radius:var(--r)}
+
+@media (max-width:1100px){
+  .charts{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:1023px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;padding:20px 16px 0;gap:8px}
+  .brand{justify-items:start;text-align:left}
+  .logo{justify-content:flex-start}
+  .api-badge{justify-self:start}
+  .nav{flex-direction:row;overflow-x:auto;padding:10px 10px 18px;gap:12px}
+  .nav a{flex:none}
+  .source{display:none}
+  .main{padding:16px 16px 40px}
+}
+@media (max-width:760px){
+  .kpis.three{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .panel{position:fixed;left:16px;right:16px;bottom:16px;top:auto;width:auto;max-height:70vh}
+}
+@media (max-width:480px){
+  .kpis{grid-template-columns:1fr}
+  .card{padding:20px}
+  .room-body{gap:16px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="logo"><svg role="img" aria-label="West Telco" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 931.47 292.2">
+  <defs></defs>
+  <path class="cls-1" d="M78.41,85.98l4.45-4.45c4.51-4.51,11.83-4.51,16.34,0l4.45,4.45c2.26,2.26,5.22,3.39,8.18,3.38,2.96,0,5.92-1.13,8.18-3.38l4.45-4.45c4.51-4.51,11.83-4.51,16.35,0l4.45,4.45c2.26,2.26,5.22,3.39,8.18,3.38,2.96,0,5.92-1.12,8.18-3.38l4.45-4.45c4.51-4.51,11.83-4.51,16.35,0l4.45,4.45c4.51,4.51,11.83,4.51,16.34,0l4.45-4.45c4.51-4.51,4.51-11.83,0-16.34l-4.45-4.45c-4.51-4.51-11.83-4.51-16.35,0l-4.45,4.45c-4.51,4.51-11.83,4.51-16.34,0l-4.45-4.45c-2.54-2.54-5.97-3.65-9.29-3.33-2.58.24-5.1,1.35-7.08,3.33l-4.45,4.45c-4.51,4.51-11.83,4.51-16.34,0l-4.45-4.45c-2.82-2.82-6.74-3.88-10.38-3.17-2.19.42-4.28,1.48-5.98,3.18l-4.45,4.45c-4.51,4.51-11.83,4.51-16.34,0l-4.45-4.45c-4.51-4.51-11.83-4.51-16.34,0l-4.45,4.45c-4.51,4.51-4.51,11.83,0,16.34l4.45,4.45c4.51,4.51,11.83,4.51,16.34,0ZM272.14,154.51c-6.55-4.07-14.47-6.13-23.54-6.13s-16.84,2.06-23.45,6.13c-6.6,4.07-11.75,9.63-15.29,16.53-3.53,6.89-5.32,14.67-5.32,23.14s1.88,16.12,5.59,23.06c3.71,6.96,9,12.55,15.73,16.62,6.72,4.07,14.67,6.13,23.62,6.13,10.48,0,19.18-2.55,25.86-7.57,3.45-2.59,6.45-5.61,8.94-8.98,1.6-2.17,1.84-5,.63-7.4-1.22-2.41-3.55-3.84-6.25-3.84-2.28,0-4.44,1.14-5.76,3.05-2.09,3-4.76,5.57-7.94,7.65-4.09,2.67-9.24,4.03-15.3,4.03-5.73,0-10.82-1.24-15.15-3.7-4.33-2.45-7.84-5.81-10.41-9.97-2.47-4-4.09-8.46-4.82-13.25h73.39v-5.83c0-8.47-1.79-16.25-5.32-23.14-3.54-6.9-8.65-12.46-15.2-16.53ZM219.47,186.6c1.33-7.04,4.45-13.02,9.28-17.79,4.96-4.89,11.64-7.38,19.86-7.38s14.93,2.48,19.94,7.38c4.88,4.77,7.97,10.76,9.2,17.79h-58.28ZM870.4,132.72c-.34-.36-.77-.7-1.29-1,1.05-.15,1.84-.52,2.37-1.11.53-.58.79-1.33.79-2.22,0-.71-.18-1.34-.52-1.89-.35-.55-.81-.93-1.39-1.15-.58-.21-1.51-.32-2.78-.32h-5.09v11.96h2.42v-4.99h.49c.56,0,.96.04,1.22.14.26.09.5.25.73.5.23.24.65.83,1.27,1.76l1.75,2.6h2.89l-1.46-2.33c-.58-.93-1.04-1.58-1.38-1.94ZM866.69,130.09h-1.79v-3.04h1.89c.98,0,1.57.01,1.76.04.39.06.7.22.91.47.21.25.32.57.32.98,0,.36-.08.66-.24.9-.16.24-.39.41-.68.51-.29.1-1.01.15-2.17.15ZM867.21,120.91c-5.83,0-10.56,4.73-10.56,10.57s4.73,10.56,10.56,10.56,10.57-4.73,10.57-10.56-4.73-10.57-10.57-10.57ZM867.21,140.4c-4.92,0-8.93-4-8.93-8.93s4-8.93,8.93-8.93,8.93,4,8.93,8.93-4,8.93-8.93,8.93ZM361.04,192.08c-4.45-1.76-9.23-3.15-14.21-4.15-4.94-.99-9.68-2.05-14.09-3.15-4.36-1.09-7.95-2.57-10.7-4.39-2.66-1.77-3.96-4.26-3.96-7.6,0-8.11,6.64-12.06,20.3-12.06,7.19,0,12.41,1.31,15.51,3.9,1.97,1.65,3.42,3.52,4.31,5.56,1.12,2.56,3.62,4.21,6.37,4.21,2.46,0,4.69-1.26,5.97-3.37,1.27-2.09,1.36-4.63.24-6.79-.5-.96-1.06-1.91-1.68-2.83-2.56-3.81-6.35-6.97-11.27-9.4-4.91-2.42-11.34-3.65-19.1-3.65-11.41,0-20.17,2.25-26.03,6.69-5.91,4.48-8.9,10.85-8.9,18.95,0,5.5,1.47,9.91,4.36,13.1,2.85,3.15,6.58,5.62,11.09,7.34,4.45,1.7,9.22,3.09,14.2,4.15,4.86,1.03,9.61,2.12,14.1,3.24,4.36,1.09,7.95,2.63,10.68,4.56,2.67,1.89,3.97,4.5,3.97,7.95,0,2.77-.78,5.06-2.31,6.82-1.57,1.79-3.53,3.16-5.83,4.05-2.34.91-4.8,1.55-7.32,1.9-2.54.35-4.7.52-6.41.52-5.5,0-10.02-.84-13.43-2.49-3.39-1.64-5.94-3.81-7.57-6.45-.8-1.29-1.45-2.62-1.94-3.96-1.06-2.88-3.81-4.82-6.84-4.82-2.46,0-4.74,1.23-6.1,3.29-1.36,2.06-1.59,4.64-.62,6.9.73,1.71,1.64,3.38,2.71,4.99,2.96,4.45,7.32,8.08,12.94,10.8,5.61,2.71,12.56,4.09,20.68,4.09,10.94,0,19.81-2.31,26.37-6.85,6.62-4.59,9.98-11.33,9.98-20.02,0-5.61-1.46-10.13-4.35-13.44-2.85-3.27-6.58-5.83-11.09-7.61ZM203.46,124.29c-1.37-1.85-3.47-2.92-5.77-2.92-3.17,0-5.93,2.04-6.85,5.07l-27.92,91.32-25.53-61.74,4.39-13.65.08.26,3.89-11.99c.71-2.18.34-4.5-1.01-6.36-1.35-1.86-3.44-2.92-5.74-2.92-3.1,0-5.81,1.98-6.76,4.93l-29.21,91.24-27.85-91.1c-.93-3.03-3.68-5.07-6.86-5.07-2.3,0-4.41,1.06-5.77,2.92s-1.76,4.18-1.07,6.38l31.63,101.65c1.17,3.76,4.6,6.28,8.53,6.28h2.65c3.89,0,7.31-2.49,8.5-6.2l5.49-17.04,11.87-36.88,22.66,52.66c1.43,4.46,5.54,7.45,10.23,7.45s8.85-3.03,10.26-7.55l31.23-100.38c.68-2.2.29-4.52-1.07-6.38ZM560.51,128.16c0-3.75-3.05-6.79-6.79-6.79h-81.72c-3.75,0-6.79,3.05-6.79,6.79s3.05,6.79,6.79,6.79h33.72v96.5c0,3.94,3.2,7.14,7.14,7.14s7.14-3.2,7.14-7.14v-96.5h33.72c3.75,0,6.79-3.05,6.79-6.79ZM614.17,154.51c-6.55-4.07-14.47-6.13-23.54-6.13s-16.84,2.06-23.45,6.13c-6.61,4.07-11.75,9.63-15.29,16.53-3.53,6.89-5.32,14.68-5.32,23.14s1.88,16.12,5.59,23.06c3.71,6.96,9,12.55,15.73,16.62,6.72,4.07,14.67,6.13,23.62,6.13,10.49,0,19.18-2.55,25.86-7.57,3.44-2.59,6.45-5.61,8.94-8.98,1.6-2.17,1.84-5,.63-7.4-1.21-2.41-3.55-3.84-6.25-3.84-2.28,0-4.43,1.14-5.76,3.05-2.09,3-4.76,5.58-7.94,7.65-4.09,2.67-9.24,4.03-15.3,4.03-5.73,0-10.82-1.24-15.15-3.7-4.34-2.45-7.84-5.81-10.41-9.97-2.47-4-4.09-8.45-4.83-13.25h73.39v-5.83c0-8.47-1.79-16.26-5.32-23.14-3.54-6.9-8.65-12.46-15.2-16.53ZM561.5,186.6c1.33-7.04,4.45-13.02,9.28-17.79,4.96-4.89,11.64-7.38,19.86-7.38s14.93,2.48,19.95,7.38c4.88,4.77,7.97,10.75,9.2,17.79h-58.28ZM753.85,209.93c-2.55,0-4.94,1.43-6.22,3.73-1.9,3.4-4.51,6.31-7.77,8.65-4.26,3.07-9.49,4.63-15.54,4.63s-11.86-1.5-16.53-4.47c-4.68-2.97-8.33-7-10.84-11.97-2.52-4.98-3.8-10.47-3.8-16.32s1.28-11.48,3.8-16.4c2.51-4.91,6.16-8.91,10.85-11.88,4.68-2.97,10.24-4.47,16.53-4.47s11.27,1.56,15.54,4.63c3.25,2.34,5.87,5.25,7.77,8.66,1.28,2.3,3.67,3.73,6.22,3.73s4.95-1.38,6.21-3.68c1.28-2.34,1.18-5.08-.27-7.34-2.65-4.12-6.12-7.78-10.32-10.87-7.38-5.43-16.43-8.18-26.9-8.18-8.84,0-16.61,2.06-23.1,6.13-6.49,4.07-11.6,9.63-15.19,16.53-3.59,6.88-5.41,14.67-5.41,23.15s1.82,16.12,5.41,23.06c3.59,6.96,8.71,12.55,15.2,16.62,6.49,4.07,14.26,6.14,23.1,6.14,10.48,0,19.53-2.75,26.9-8.18,4.2-3.09,7.67-6.75,10.32-10.87,1.45-2.25,1.55-5,.27-7.34-1.26-2.31-3.58-3.68-6.21-3.68ZM839.16,154.51c-6.55-4.07-14.47-6.13-23.54-6.13s-16.84,2.06-23.45,6.13c-6.61,4.07-11.75,9.63-15.29,16.53-3.53,6.89-5.32,14.68-5.32,23.14s1.79,16.11,5.32,23.05c3.54,6.96,8.68,12.55,15.29,16.62,6.61,4.07,14.5,6.13,23.45,6.13s16.98-2.06,23.54-6.13c6.55-4.07,11.66-9.66,15.2-16.62,3.53-6.94,5.32-14.7,5.32-23.05s-1.79-16.26-5.32-23.14c-3.54-6.9-8.65-12.46-15.2-16.53ZM841.94,210.52c-2.28,4.96-5.67,8.99-10.06,11.96-4.38,2.96-9.85,4.46-16.25,4.46s-11.73-1.5-16.17-4.46c-4.45-2.97-7.86-6.99-10.15-11.95-2.29-4.99-3.46-10.48-3.46-16.33s1.16-11.49,3.45-16.42c2.28-4.9,5.7-8.9,10.15-11.87,4.45-2.96,9.89-4.46,16.17-4.46s11.87,1.5,16.25,4.46c4.4,2.97,7.78,6.97,10.06,11.87,2.29,4.93,3.45,10.46,3.45,16.42s-1.16,11.35-3.46,16.33ZM656.83,120.34c-3.94,0-7.14,3.2-7.14,7.14v103.97c0,3.94,3.2,7.14,7.14,7.14s7.14-3.2,7.14-7.14v-103.97c0-3.94-3.2-7.14-7.14-7.14ZM427.14,149.18h-13.14v-22.38c-.11-3.2-2.67-6.11-6.1-6.92-1.93-.47-4.08-.14-5.84.95-2.3,1.42-3.75,3.76-3.78,6.09,0,.04,0,.07,0,.21v22.05h-10.77c-3.5.03-6.51,2.6-7.01,5.97-.05.31-.08.65-.08,1.02s.03.7.08,1.01c.5,3.33,3.36,5.84,6.79,5.96h10.98v55.94c0,4.19.68,7.96,2.01,11.2,1.19,2.97,2.89,5.27,5.07,6.82,2.12,1.51,4.63,2.48,7.46,2.89,2.66.36,5.41.54,8.17.54h1.73s.2,0,.2,0c3.94-.12,7.02-3.22,7.02-7.06s-3.07-6.96-7-7.07l-.02.57h0l-.06-.57h-.15c-1.07,0-2.35-.03-3.68-.18-.26-.03-.51-.07-.77-.11l-.29-.05c-.38-.05-.74-.12-1.11-.19-.67-.11-1.22-.38-1.67-.82-.42-.4-.79-1.17-1.07-2.22-.23-.94-.2-2.23-.17-3.86.01-.63.03-1.3.03-2.01v-53.82h13.12c3.86-.09,7-3.22,7-6.97s-3.06-6.9-6.98-6.99ZM387.52,149.75h0s0,0,0,0h0Z"></path>
+</svg></div>
+      <p class="api-badge" style="margin:18px 0 0">Neat Pulse API</p>
+      <p class="brand-sub">Monitor de salas</p>
+    </div>
+    <nav class="nav" id="nav" aria-label="Secciones"></nav>
+    <p class="source">Datos de sensores Neat Pulse</p>
+  </aside>
+
+  <div class="main-col">
+    <main class="main" id="main-wrap">
+      <header class="head">
+        <div>
+          <h1 id="title">Resumen de salas</h1>
+          <p class="desc" id="desc"></p>
+        </div>
+        <div class="controls">
+          <div class="seg" id="filters" role="group" aria-label="Filtrar salas">
+            <button type="button" data-filter="todas" aria-pressed="true">Todas</button>
+            <button type="button" data-filter="ocupadas" aria-pressed="false">Ocupadas</button>
+            <button type="button" data-filter="alertas" aria-pressed="false">Con alerta</button>
+          </div>
+          <div class="picker">
+            <button type="button" class="btn" id="roomsBtn" aria-expanded="false" aria-controls="roomsPanel"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span id="roomsBtnLabel">Salas</span></button>
+            <div class="panel" id="roomsPanel" role="group" aria-label="Elegir salas a mostrar" hidden>
+              <div class="panel-head"><strong>Salas a mostrar</strong><span class="muted" id="roomsCount"></span></div>
+              <ul id="roomsList"></ul>
+              <div class="panel-actions"><button type="button" class="btn" id="roomsAll">Mostrar todas</button></div>
+            </div>
+          </div>
+          <div class="auto">
+            <span id="autoLabel">Actualizar cada 2 min</span>
+            <button type="button" class="switch" id="autoSwitch" role="switch" aria-checked="true" aria-labelledby="autoLabel"><span class="knob"></span></button>
+          </div>
+          <button type="button" class="btn" id="refreshBtn" aria-busy="false"><span class="live" aria-hidden="true"></span>Actualizar ahora</button>
+        </div>
+      </header>
+      <p class="status"><span id="status" role="status">Cargando datos...</span><span class="tag" id="mockTag" hidden>Datos de ejemplo</span></p>
+      <div id="view" class="stack"></div>
+    </main>
+  </div>
+</div>
+<noscript>Este panel necesita JavaScript para mostrar los datos.</noscript>
+
+<script>
+(function () {
+'use strict';
+
+/* ---------- Configuración ---------- */
+const CONFIG = {
+  MOCK: new URLSearchParams(location.search).has('demo'),   // agrega ?demo a la dirección para ver datos de ejemplo
+  API_URL: 'https://neat-pulse-proxy.david-jonas1094.workers.dev/rooms',   // tu Worker de Cloudflare
+  REFRESH_MS: 120000,                           // 2 minutos
+  TZ: 'America/Mexico_City'
+};
+const T = { tempMin: 20, tempMax: 27, humMin: 30, humMax: 60, vocGood: 100, vocWarn: 250, co2Good: 800, co2Warn: 1200, staleMin: 10 };
+const C = { orange: '#E8710A', sky: '#1E88E5', ink: '#0A1224', blue: '#043172', blue3: '#6FA8FF', gray: '#8A95A6', grid: 'rgba(10,18,36,.08)', ok: '#2FBF7E', warn: '#F2B441', bad: '#E5484D', bg: '#E6ECF5' };
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Utilidades ---------- */
+const $ = (s, el) => (el || document).querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const PATHS = {
+  layout: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  thermo: '<path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/>',
+  drop: '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
+  wind: '<path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'
+};
+const icon = n => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[n]}</svg>`;
+
+const fmtTime = ts => new Date(ts * 1000).toLocaleTimeString('es-MX', { timeZone: CONFIG.TZ, hour12: false });
+const ageMin = ts => Math.max(0, (Date.now() / 1000 - ts) / 60);
+const ago = ts => {
+  const m = ageMin(ts);
+  if (m < 1) return 'hace <1 min';
+  if (m < 60) return `hace ${Math.floor(m)} min`;
+  return `hace ${Math.floor(m / 60)} h`;
+};
+const isStale = r => ageMin(r.ts) > T.staleMin;
+
+const airLabel = v => v <= T.vocGood ? 'Bueno' : v <= T.vocWarn ? 'Regular' : 'Malo';
+const co2Label = v => v <= T.co2Good ? 'Bueno' : v <= T.co2Warn ? 'Regular' : 'Malo';
+const airCls = l => l === 'Bueno' ? 'ok' : l === 'Regular' ? 'warn' : l === 'Malo' ? 'bad' : 'na';
+const airRank = r => ({ Malo: 3, Regular: 2, Bueno: 1 })[r.air] || 0;
+const tempState = t => t < T.tempMin ? 'Fría' : t > T.tempMax ? 'Cálida' : 'En confort';
+const humState = h => h < T.humMin ? 'Seca' : h > T.humMax ? 'Húmeda' : 'En confort';
+const comfortCls = s => s === 'En confort' ? 'ok' : 'warn';
+const state = (label, cls) => `<span class="state ${cls}"><i></i>${label}</span>`;
+
+function prep(r) {
+  const vocI = Math.round(r.vocIndex || 0), co2 = Math.round(r.co2 || 0);
+  // Algunos equipos reportan VOC Index y otros CO₂. Se usa la medición que tenga la sala.
+  let air = 'Sin dato', airMetric = '', airText = 'Sin dato';
+  if (vocI > 0) { air = airLabel(vocI); airMetric = 'VOC Index'; airText = String(vocI); }
+  else if (co2 > 0) { air = co2Label(co2); airMetric = 'CO₂'; airText = co2 + ' ppm'; }
+  return Object.assign({}, r, {
+    t: Math.round(r.temp), h: Math.round(r.humidity), voc: vocI, co2, lux: Math.round(r.illumination),
+    air, airMetric, airText
+  });
+}
+function alertsOf(r) {
+  const a = [];
+  if (isStale(r)) a.push('Sin datos recientes');
+  if (r.t < T.tempMin) a.push('Temperatura baja'); else if (r.t > T.tempMax) a.push('Temperatura alta');
+  if (r.h < T.humMin) a.push('Humedad baja'); else if (r.h > T.humMax) a.push('Humedad alta');
+  if (r.air === 'Regular') a.push('Aire regular'); else if (r.air === 'Malo') a.push('Aire malo');
+  return a;
+}
+
+/* ---------- Datos de ejemplo ---------- */
+const BASE = [
+  { id: 'r1', name: 'Sala 1', temp: 24.6, humidity: 44, vocIndex: 72,  co2: 0,   illumination: 310, people: 4, age: 20 },
+  { id: 'r2', name: 'Sala 2', temp: 26.1, humidity: 66, vocIndex: 88,  co2: 0,   illumination: 260, people: 2, age: 35 },
+  { id: 'r3', name: 'Sala 3', temp: 25.3, humidity: 48, vocIndex: 0,   co2: 560, illumination: 180, people: 0, age: 12 },
+  { id: 'r4', name: 'Sala 4', temp: 27.8, humidity: 41, vocIndex: 158, co2: 0,   illumination: 420, people: 7, age: 50 },
+  { id: 'r5', name: 'Sala 5', temp: 26.9, humidity: 39, vocIndex: 268, co2: 0,   illumination: 95,  people: 9, age: 8 },
+  { id: 'r6', name: 'Sala 6', temp: 23.9, humidity: 52, vocIndex: 64,  co2: 0,   illumination: 47,  people: 1, age: 1080 },
+  { id: 'r7', name: 'Sala 7', temp: 25.0, humidity: 46, vocIndex: 0,   co2: 940, illumination: 530, people: 3, age: 25 }
+];
+let mock = null;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+async function fetchMock() {
+  await new Promise(r => setTimeout(r, 350));
+  catalog = BASE.map(b => ({ id: b.id, name: b.name }));
+  const now = Math.floor(Date.now() / 1000);
+  if (!mock) {
+    mock = BASE.map(b => Object.assign({}, b, { ts: now - b.age }));
+  } else {
+    mock = mock.map((r, i) => BASE[i].age > 600 ? r : Object.assign({}, r, {
+      temp: clamp(r.temp + rnd(-0.3, 0.3), 18, 31),
+      humidity: clamp(r.humidity + rnd(-1.2, 1.2), 20, 75),
+      vocIndex: r.vocIndex > 0 ? clamp(r.vocIndex + rnd(-7, 7), 20, 400) : 0,
+      co2: r.co2 > 0 ? clamp(r.co2 + rnd(-25, 25), 400, 1600) : 0,
+      illumination: clamp(r.illumination + rnd(-20, 20), 0, 900),
+      people: Math.random() < 0.25 ? clamp(r.people + (Math.random() < 0.5 ? -1 : 1), 0, 12) : r.people,
+      ts: now - Math.floor(rnd(0, 45))
+    }));
+  }
+  return mock.map(m => ({ id: m.id, name: m.name, ts: m.ts, temp: m.temp, humidity: m.humidity, vocIndex: m.vocIndex, co2: m.co2, illumination: m.illumination, people: m.people }));
+}
+
+/* ---------- Historial (alimenta las líneas de tiempo) ---------- */
+const HKEY = 'wt_history_v1', HMAX = 120;
+let hist = [];
+
+function seedHistory() {            // solo datos de ejemplo: simula la última hora
+  const now = Math.floor(Date.now() / 1000), N = 30, step = 120;
+  const cur = BASE.map(b => ({ temp: b.temp, humidity: b.humidity, vocIndex: b.vocIndex, co2: b.co2, illumination: b.illumination, people: b.people }));
+  const snaps = [];
+  for (let i = 1; i <= N; i++) {    // camina hacia atrás desde el valor actual
+    const t = now - i * step, r = {};
+    BASE.forEach((b, k) => {
+      if (b.age > 600 && t > now - b.age) return;   // la sala sin datos recientes no tiene lecturas nuevas
+      const c = cur[k];
+      c.temp = clamp(c.temp + rnd(-0.35, 0.35), 18, 31);
+      c.humidity = clamp(c.humidity + rnd(-1.5, 1.5), 20, 75);
+      if (c.vocIndex > 0) c.vocIndex = clamp(c.vocIndex + rnd(-9, 9), 20, 400);
+      if (c.co2 > 0) c.co2 = clamp(c.co2 + rnd(-30, 30), 400, 1600);
+      c.illumination = clamp(c.illumination + rnd(-25, 25), 0, 900);
+      if (Math.random() < 0.2) c.people = clamp(c.people + (Math.random() < 0.5 ? -1 : 1), 0, 12);
+      r[b.id] = { temp: +c.temp.toFixed(1), humidity: +c.humidity.toFixed(1), vocIndex: Math.round(c.vocIndex), co2: Math.round(c.co2), illumination: Math.round(c.illumination), people: c.people };
+    });
+    snaps.push({ t, r });
+  }
+  hist = snaps.reverse();
+}
+function loadHistory() {
+  hist = [];
+  if (CONFIG.MOCK) { seedHistory(); return; }
+  try {                              // con datos reales se guarda en este navegador (últimas 6 h)
+    const raw = JSON.parse(localStorage.getItem(HKEY) || '[]');
+    const min = Date.now() / 1000 - 6 * 3600;
+    hist = Array.isArray(raw) ? raw.filter(x => x && x.t > min) : [];
+  } catch (e) { hist = []; }
+}
+function pushHistory(list) {
+  const r = {};
+  list.forEach(x => {
+    if (isStale(x)) return;
+    r[x.id] = { temp: +x.temp.toFixed(1), humidity: +x.humidity.toFixed(1), vocIndex: Math.round(x.vocIndex), co2: Math.round(x.co2 || 0), illumination: Math.round(x.illumination), people: x.people };
+  });
+  hist.push({ t: Math.floor(Date.now() / 1000), r });
+  if (hist.length > HMAX) hist = hist.slice(-HMAX);
+  if (!CONFIG.MOCK) { try { localStorage.setItem(HKEY, JSON.stringify(hist)); } catch (e) { /* sin almacenamiento */ } }
+}
+const seriesOf = (id, key) => hist.filter(x => x.r[id] && ((key !== 'vocIndex' && key !== 'co2') || x.r[id][key] > 0)).map(x => ({ x: x.t, y: x.r[id][key] }));
+const totalSeries = fn => hist.map(x => ({ x: x.t, y: fn(Object.values(x.r)) }));
+const meanOf = (arr, key) => arr.length ? arr.reduce((a, r) => a + r[key], 0) / arr.length : 0;
+
+/* ---------- Datos reales (a través del Worker) ---------- */
+// Convierte el formato del API de Neat ({roomData|endpointData:{data:[...]}}) a un objeto plano.
+function normalizeRoom(r) {
+  const block = r.roomData || r.endpointData;
+  const d = block && block.data && block.data[0];
+  if (!d) throw new Error('sin datos de sensor');
+  return { id: r.id, name: r.name, ts: Number(d.timestamp), temp: d.temp, humidity: d.humidity, vocIndex: d.vocIndex, co2: d.co2, illumination: d.illumination, people: d.people };
+}
+async function fetchLive() {
+  if (!CONFIG.API_URL) throw new Error('falta configurar API_URL');
+  const KEY = 'wt_access_key';
+  const call = k => fetch(CONFIG.API_URL, { headers: k ? { 'X-Access-Key': k } : {} });
+  let stored = '';
+  try { stored = localStorage.getItem(KEY) || ''; } catch (e) { /* sin almacenamiento */ }
+  let res = await call(stored);
+  if (res.status === 401) {
+    // Solo si el Worker exige clave: se pide una vez y se guarda en este navegador
+    try { localStorage.removeItem(KEY); } catch (e) { /* */ }
+    const k = window.prompt(stored ? 'La clave guardada ya no funciona. Escribe la clave de acceso' : 'Este panel requiere clave de acceso');
+    if (!k) throw new Error('falta la clave de acceso');
+    res = await call(k);
+    if (res.status === 401) throw new Error('clave de acceso incorrecta');
+    try { localStorage.setItem(KEY, k); } catch (e) { /* */ }
+  }
+  if (!res.ok) throw new Error('respuesta ' + res.status);
+  const json = await res.json();            // { rooms: [ { id, name, roomData:{ data:[...] } } ] }
+  const ok = [];
+  missing = [];
+  catalog = (json.rooms || []).map(r => ({ id: r.id, name: r.name || String(r.id) }));
+  (json.rooms || []).forEach(r => {
+    try { ok.push(normalizeRoom(r)); } catch (e) { missing.push({ id: r.id, name: r.name || String(r.id) }); }
+  });
+  if (!ok.length) throw new Error('ninguna sala devolvió datos de sensor');
+  return ok;
+}
+
+/* ---------- Estado ---------- */
+let missing = [], catalog = [], allRooms = [], rooms = [], hidden = new Set(), lastUpdate = null, view = 'dashboard', filter = 'todas';
+let charts = [], animating = false, animateNext = true, timer = null, busy = false, auto = true, errorMsg = '';
+
+const sum = f => rooms.reduce((a, r) => a + f(r), 0);
+const avg = f => rooms.length ? sum(f) / rooms.length : 0;
+const top = (f) => rooms.reduce((a, b) => f(b) > f(a) ? b : a);
+const low = (f) => rooms.reduce((a, b) => f(b) < f(a) ? b : a);
+
+/* ---------- Componentes ---------- */
+const kpi = k => `<article class="card"><div class="kl">${k.label}</div><div class="kv">${k.value}${k.unit ? `<small>${k.unit}</small>` : ''}</div><div class="kc">${k.caption || ''}</div></article>`;
+
+const lastReading = r => `${fmtTime(r.ts)} <span class="muted">(${ago(r.ts)})</span>${isStale(r) ? ' ' + state('Sin datos recientes', 'warn') : ''}`;
+
+function table(cols, rows) {
+  return `<div class="tablewrap"><table><thead><tr>${cols.map(c => `<th scope="col"${c.num ? ' class="num"' : ''}>${c.h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map(c => `<td${c.num ? ' class="num"' : ''}>${c.f(r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+function roomCard(r) {
+  const al = alertsOf(r);
+  return `<article class="card room">
+    <header><h3>${esc(r.name)}</h3>${state(r.air === 'Sin dato' ? 'Aire sin dato' : 'Aire ' + r.air.toLowerCase(), airCls(r.air))}</header>
+    <p class="meta">${fmtTime(r.ts)} (${ago(r.ts)})</p>
+    <div class="room-body">
+      <div class="well${r.people ? '' : ' empty'}" role="img" aria-label="${r.people} ${r.people === 1 ? 'persona' : 'personas'}"><b>${r.people}</b><span>${r.people === 1 ? 'persona' : 'personas'}</span></div>
+      <dl>
+        <div><dt>Temperatura</dt><dd>${r.t} °C</dd></div>
+        <div><dt>Humedad</dt><dd>${r.h} %</dd></div>
+        <div><dt>${r.airMetric || 'Calidad del aire'}</dt><dd>${r.airText}</dd></div>
+      </dl>
+    </div>
+    ${al.length ? `<ul class="chips" aria-label="Alertas">${al.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
+  </article>`;
+}
+
+function legendCard() {
+  return `<article class="card legend">
+    <h3>Rangos de referencia</h3>
+    <ul>
+      <li>${state('Bueno', 'ok')} VOC Index hasta ${T.vocGood} o CO₂ hasta ${T.co2Good} ppm</li>
+      <li>${state('Regular', 'warn')} VOC Index de ${T.vocGood + 1} a ${T.vocWarn} o CO₂ de ${T.co2Good + 1} a ${T.co2Warn} ppm</li>
+      <li>${state('Malo', 'bad')} VOC Index mayor a ${T.vocWarn} o CO₂ mayor a ${T.co2Warn} ppm</li>
+      <li>Temperatura en confort: ${T.tempMin} a ${T.tempMax} °C</li>
+      <li>Humedad en confort: ${T.humMin} a ${T.humMax} %</li>
+      <li>Sin datos recientes: última lectura de más de ${T.staleMin} min</li>
+    </ul>
+  </article>`;
+}
+
+/* ---------- Gráficas ---------- */
+const anim = () => animating ? { duration: 500 } : false;
+function mk(id, cfg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  cfg.options = Object.assign({ responsive: true, maintainAspectRatio: false, animation: anim() }, cfg.options);
+  charts.push(new Chart(el, cfg));
+}
+const destroyCharts = () => { charts.forEach(c => { c.stop(); c.destroy(); }); charts = []; };
+const legendOpts = { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 28, padding: 16 } };
+const fmtHM = sec => new Date(sec * 1000).toLocaleTimeString('es-MX', { timeZone: CONFIG.TZ, hour: '2-digit', minute: '2-digit', hour12: false });
+
+// Animación "progressive line with easing" de Chart.js: la línea se dibuja punto por punto
+function progressive(n) {
+  const ease = Chart.helpers.easingEffects.easeOutQuad;
+  const total = Math.min(2400, 900 + n * 30);
+  const duration = ctx => ease(ctx.index / n) * total / n;
+  const delay = ctx => ease(ctx.index / n) * total;
+  const previousY = ctx => {
+    const ch = ctx.chart, meta = ch.getDatasetMeta(ctx.datasetIndex);
+    const prev = ctx.index > 0 && meta && meta.data ? meta.data[ctx.index - 1] : null;
+    if (prev) return prev.getProps(['y'], true).y;
+    const d = ch.data.datasets[ctx.datasetIndex];
+    return ch.scales && ch.scales.y && d && d.data[0] ? ch.scales.y.getPixelForValue(d.data[0].y) : NaN;
+  };
+  return {
+    x: { type: 'number', easing: 'linear', duration, from: NaN,
+      delay(ctx) { if (ctx.type !== 'data' || ctx.xStarted) return 0; ctx.xStarted = true; return delay(ctx); } },
+    y: { type: 'number', easing: 'linear', duration, from: previousY,
+      delay(ctx) { if (ctx.type !== 'data' || ctx.yStarted) return 0; ctx.yStarted = true; return delay(ctx); } }
+  };
+}
+
+// 10 colores bien distintos. Cada sala conserva su color en todas las gráficas aunque ocultes otras.
+const ROOM_COLORS = ['#043172', '#E8710A', '#7B3FE4', '#0E9AA7', '#D81B60', '#2E7D32', '#8D6E63', '#1E88E5', '#B58900', '#546E7A'];
+const ROOM_DASH = [[], [8, 4], [3, 3]];   // si hay más de 10 salas, los colores se repiten con otro trazo
+const ds = (label, color, data, extra) => Object.assign({ label, data, borderColor: color, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: color, tension: 0.25 }, extra || {});
+const roomIdx = r => Math.max(0, catalog.findIndex(c => String(c.id) === String(r.id)));
+const roomSets = key => rooms.map(r => { const i = roomIdx(r); return ds(r.name, ROOM_COLORS[i % 10], seriesOf(r.id, key), { borderDash: ROOM_DASH[Math.floor(i / 10) % 3] }); }).filter(d => d.data.length > 0);
+const limitLine = (label, val) => ({ label, data: [{ x: hist[0].t, y: val }, { x: hist[hist.length - 1].t, y: val }], borderColor: C.gray, borderDash: [2, 4], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, isLimit: true });
+
+function lineCfg(o) {
+  const n = hist.length;
+  return {
+    type: 'line',
+    data: { datasets: o.datasets },
+    options: {
+      animation: animating ? progressive(n) : false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: o.legend === false ? { display: false } : legendOpts,
+        tooltip: { filter: i => !i.dataset.isLimit, callbacks: { title: it => fmtHM(it[0].parsed.x), label: c => ` ${c.dataset.label}: ${o.fmt(c.parsed.y)}` } }
+      },
+      scales: {
+        x: { type: 'linear', min: hist[0].t, max: hist[n - 1].t, grid: { display: false }, ticks: { maxTicksLimit: 6, callback: v => fmtHM(v) } },
+        y: { beginAtZero: !!o.zero, suggestedMin: o.ymin, suggestedMax: o.ymax, ticks: o.int ? { precision: 0 } : {}, grid: { color: C.grid }, title: { display: !!o.unit, text: o.unit } }
+      }
+    }
+  };
+}
+const chartBox = (id, label, tall) => hist.length >= 2
+  ? `<div class="chart${tall ? ' tall' : ''}"><canvas id="${id}" role="img" aria-label="${label}"></canvas></div>`
+  : `<div class="chart${tall ? ' tall' : ''}"><p class="empty">Acumulando lecturas. La gráfica aparece con la segunda actualización.</p></div>`;
+
+/* ---------- Vistas ---------- */
+const VIEWS = {};
+
+VIEWS.dashboard = {
+  nav: 'Dashboard', icon: 'layout',
+  title: 'Resumen de salas',
+  desc: 'Lecturas más recientes de los sensores de cada sala.',
+  html() {
+    const people = sum(r => r.people), occ = rooms.filter(r => r.people > 0).length;
+    const aT = Math.round(avg(r => r.temp)), aH = Math.round(avg(r => r.humidity));
+    const list = rooms.filter(r => filter === 'todas' || (filter === 'ocupadas' ? r.people > 0 : alertsOf(r).length > 0));
+    const kpis = [
+      { label: 'Personas ahora', value: people, caption: `en ${occ} de ${rooms.length} salas` },
+      { label: 'Salas ocupadas', value: occ, unit: `de ${rooms.length}`, caption: 'con al menos una persona' },
+      { label: 'Temperatura promedio', value: aT, unit: '°C', caption: `de ${Math.round(low(r => r.temp).temp)} a ${Math.round(top(r => r.temp).temp)} °C entre salas` },
+      { label: 'Humedad promedio', value: aH, unit: '%', caption: `de ${Math.round(low(r => r.humidity).humidity)} a ${Math.round(top(r => r.humidity).humidity)} % entre salas` }
+    ];
+    return `
+      <h2 class="section-title">Salas</h2>
+      <section class="rooms" aria-label="Salas">
+        ${list.length ? list.map(roomCard).join('') : '<p class="empty">Ninguna sala cumple este filtro.</p>'}
+        ${legendCard()}
+      </section>
+      <h2 class="section-title">Resumen general</h2>
+      <section class="kpis" aria-label="Indicadores generales">${kpis.map(kpi).join('')}</section>
+      <section class="charts" aria-label="Gráficas">
+        <article class="card"><h2>Personas en el tiempo</h2><p class="sub">Total en todas las salas</p>${chartBox('cPeople', 'Personas en el tiempo')}</article>
+        <article class="card"><h2>Temperatura y humedad</h2><p class="sub">Promedio de todas las salas</p>${chartBox('cTH', 'Temperatura y humedad promedio en el tiempo')}</article>
+        <article class="card"><h2>Calidad del aire</h2><p class="sub">Salas por nivel</p><div class="chart"><canvas id="cAir" role="img" aria-label="Salas por nivel de calidad del aire"></canvas></div></article>
+      </section>`;
+  },
+  mount() {
+    if (hist.length >= 2) {
+      mk('cPeople', lineCfg({ legend: false, zero: true, int: true, fmt: v => `${Math.round(v)} personas`,
+        datasets: [ds('Personas', C.blue, totalSeries(v => v.reduce((a, r) => a + r.people, 0)), { fill: true, backgroundColor: 'rgba(4,49,114,.08)' })] }));
+      mk('cTH', lineCfg({ ymin: 15, ymax: 70, fmt: v => Math.round(v),
+        datasets: [
+          ds('Temperatura (°C)', C.orange, totalSeries(v => meanOf(v, 'temp'))),
+          ds('Humedad (%)', C.sky, totalSeries(v => meanOf(v, 'humidity')))] }));
+    }
+    const cnt = { Bueno: 0, Regular: 0, Malo: 0, 'Sin dato': 0 };
+    rooms.forEach(r => cnt[r.air]++);
+    const keys = Object.keys(cnt).filter(k => k !== 'Sin dato' || cnt[k] > 0);
+    const colors = { Bueno: C.ok, Regular: C.warn, Malo: C.bad, 'Sin dato': C.gray };
+    mk('cAir', { type: 'doughnut',
+      data: { labels: keys.map(k => `${k} (${cnt[k]})`), datasets: [{ data: keys.map(k => cnt[k]), backgroundColor: keys.map(k => colors[k]), borderColor: C.bg, borderWidth: 4 }] },
+      options: { cutout: '66%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 16 } } } } });
+  }
+};
+
+function metricView(o) {
+  const charts = o.charts || [{ title: o.chartTitle, sub: o.chartSub, cfg: o.chart }];
+  return {
+    nav: o.nav, icon: o.icon, title: o.title, desc: o.desc,
+    html() {
+      const rs = [...rooms].sort(o.sort);
+      return `
+        <section class="kpis three" aria-label="Indicadores">${o.kpis().map(kpi).join('')}</section>
+        ${charts.map((c, i) => `<article class="card"><h2>${c.title}</h2><p class="sub">${c.sub}</p>${chartBox('cMain' + i, c.title, true)}</article>`).join('')}
+        <article class="card"><h2>Detalle por sala</h2>${table(o.cols, rs)}</article>`;
+    },
+    mount() {
+      if (hist.length < 2) return;
+      charts.forEach((c, i) => {
+        const cfg = c.cfg();
+        if (!cfg.data.datasets.some(d => !d.isLimit && d.data.length)) {
+          const el = document.getElementById('cMain' + i);
+          if (el) el.closest('.chart').innerHTML = `<p class="empty">${c.empty || 'Sin datos para mostrar.'}</p>`;
+          return;
+        }
+        mk('cMain' + i, cfg);
+      });
+    }
+  };
+}
+
+VIEWS.personas = metricView({
+  nav: 'Personas', icon: 'users', title: 'Personas por sala', desc: 'Ocupación actual según el conteo de los sensores.',
+  sort: (a, b) => b.people - a.people,
+  kpis: () => {
+    const occ = rooms.filter(r => r.people > 0).length;
+    return [
+      { label: 'Personas ahora', value: sum(r => r.people), caption: `en ${rooms.length} salas` },
+      { label: 'Salas ocupadas', value: occ, unit: `de ${rooms.length}`, caption: 'con al menos una persona' },
+      { label: 'Salas vacías', value: rooms.length - occ, unit: `de ${rooms.length}`, caption: 'sin personas detectadas' }
+    ];
+  },
+  chartTitle: 'Personas en el tiempo', chartSub: 'Una línea por sala. Pasa el cursor para ver cada lectura',
+  chart: () => lineCfg({ datasets: roomSets('people'), zero: true, int: true, unit: 'personas', fmt: v => `${Math.round(v)}` }),
+  cols: [
+    { h: 'Sala', f: r => esc(r.name) },
+    { h: 'Personas', num: true, f: r => r.people },
+    { h: 'Estado', f: r => state(r.people ? 'Ocupada' : 'Vacía', 'ok') },
+    { h: 'Última lectura', f: lastReading }
+  ]
+});
+
+VIEWS.temperatura = metricView({
+  nav: 'Temperatura', icon: 'thermo', title: 'Temperatura', desc: `Rango de confort de referencia: ${T.tempMin} a ${T.tempMax} °C.`,
+  sort: (a, b) => b.temp - a.temp,
+  kpis: () => { const hi = top(r => r.temp), lo = low(r => r.temp); return [
+    { label: 'Promedio', value: Math.round(avg(r => r.temp)), unit: '°C', caption: `entre ${rooms.length} salas` },
+    { label: 'Sala más cálida', value: hi.t, unit: '°C', caption: esc(hi.name) },
+    { label: 'Sala más fría', value: lo.t, unit: '°C', caption: esc(lo.name) } ]; },
+  chartTitle: 'Temperatura en el tiempo', chartSub: 'Una línea por sala. Las líneas punteadas grises marcan el rango de confort',
+  chart: () => lineCfg({ unit: '°C', ymin: 15, ymax: 32, fmt: v => `${Math.round(v)} °C`,
+    datasets: [...roomSets('temp'), limitLine(`Mínimo (${T.tempMin} °C)`, T.tempMin), limitLine(`Máximo (${T.tempMax} °C)`, T.tempMax)] }),
+  cols: [
+    { h: 'Sala', f: r => esc(r.name) },
+    { h: 'Temperatura', num: true, f: r => `${r.t} °C` },
+    { h: 'Estado', f: r => state(tempState(r.t), comfortCls(tempState(r.t))) },
+    { h: 'Última lectura', f: lastReading }
+  ]
+});
+
+VIEWS.humedad = metricView({
+  nav: 'Humedad', icon: 'drop', title: 'Humedad', desc: `Rango de confort de referencia: ${T.humMin} a ${T.humMax} %.`,
+  sort: (a, b) => b.humidity - a.humidity,
+  kpis: () => { const hi = top(r => r.humidity), lo = low(r => r.humidity); return [
+    { label: 'Promedio', value: Math.round(avg(r => r.humidity)), unit: '%', caption: `entre ${rooms.length} salas` },
+    { label: 'Sala más húmeda', value: hi.h, unit: '%', caption: esc(hi.name) },
+    { label: 'Sala más seca', value: lo.h, unit: '%', caption: esc(lo.name) } ]; },
+  chartTitle: 'Humedad en el tiempo', chartSub: 'Una línea por sala. Las líneas punteadas grises marcan el rango de confort',
+  chart: () => lineCfg({ unit: '%', ymin: 20, ymax: 80, fmt: v => `${Math.round(v)} %`,
+    datasets: [...roomSets('humidity'), limitLine(`Mínimo (${T.humMin} %)`, T.humMin), limitLine(`Máximo (${T.humMax} %)`, T.humMax)] }),
+  cols: [
+    { h: 'Sala', f: r => esc(r.name) },
+    { h: 'Humedad', num: true, f: r => `${r.h} %` },
+    { h: 'Estado', f: r => state(humState(r.h), comfortCls(humState(r.h))) },
+    { h: 'Última lectura', f: lastReading }
+  ]
+});
+
+VIEWS.aire = metricView({
+  nav: 'Calidad del aire', icon: 'wind', title: 'Calidad del aire', desc: 'Cada equipo reporta VOC Index o CO₂, según su modelo. Se usa la medición que tenga cada sala.',
+  sort: (a, b) => airRank(b) - airRank(a) || a.name.localeCompare(b.name),
+  kpis: () => ['Bueno', 'Regular', 'Malo'].map(l => {
+    const n = rooms.filter(r => r.air === l).length;
+    const cap = l === 'Bueno' ? `VOC Index hasta ${T.vocGood} o CO₂ hasta ${T.co2Good} ppm`
+      : l === 'Regular' ? `VOC Index ${T.vocGood + 1} a ${T.vocWarn} o CO₂ ${T.co2Good + 1} a ${T.co2Warn} ppm`
+      : `VOC Index mayor a ${T.vocWarn} o CO₂ mayor a ${T.co2Warn} ppm`;
+    return { label: state(l, airCls(l)), value: n, unit: n === 1 ? 'sala' : 'salas', caption: cap };
+  }),
+  charts: [
+    { title: 'VOC Index en el tiempo', sub: 'Menos es mejor. Las líneas punteadas grises marcan los límites entre niveles', empty: 'Ninguna sala reporta VOC Index.',
+      cfg: () => lineCfg({ zero: true, ymax: 300, fmt: v => `${Math.round(v)}`,
+        datasets: [...roomSets('vocIndex'), limitLine(`Límite bueno (${T.vocGood})`, T.vocGood), limitLine(`Límite regular (${T.vocWarn})`, T.vocWarn)] }) },
+    { title: 'CO₂ en el tiempo', sub: 'En ppm. Menos es mejor. Las líneas punteadas grises marcan los límites entre niveles', empty: 'Ninguna sala reporta CO₂.',
+      cfg: () => lineCfg({ unit: 'ppm', ymin: 300, ymax: 1400, fmt: v => `${Math.round(v)} ppm`,
+        datasets: [...roomSets('co2'), limitLine(`Límite bueno (${T.co2Good} ppm)`, T.co2Good), limitLine(`Límite regular (${T.co2Warn} ppm)`, T.co2Warn)] }) }
+  ],
+  cols: [
+    { h: 'Sala', f: r => esc(r.name) },
+    { h: 'Medición', f: r => r.airMetric ? `${r.airMetric} <strong>${r.airText}</strong>` : '<span class="muted">Sin dato</span>' },
+    { h: 'Calidad', f: r => state(r.air, airCls(r.air)) },
+    { h: 'Última lectura', f: lastReading }
+  ]
+});
+
+VIEWS.luz = metricView({
+  nav: 'Iluminación', icon: 'sun', title: 'Iluminación', desc: 'Nivel de luz medido por el sensor de cada sala, en lux.',
+  sort: (a, b) => b.illumination - a.illumination,
+  kpis: () => { const hi = top(r => r.illumination), lo = low(r => r.illumination); return [
+    { label: 'Promedio', value: Math.round(avg(r => r.illumination)), unit: 'lx', caption: `entre ${rooms.length} salas` },
+    { label: 'Sala más iluminada', value: hi.lux, unit: 'lx', caption: esc(hi.name) },
+    { label: 'Sala más tenue', value: lo.lux, unit: 'lx', caption: esc(lo.name) } ]; },
+  chartTitle: 'Iluminación en el tiempo', chartSub: 'Una línea por sala, en lux',
+  chart: () => lineCfg({ zero: true, unit: 'lx', fmt: v => `${Math.round(v)} lx`, datasets: roomSets('illumination') }),
+  cols: [
+    { h: 'Sala', f: r => esc(r.name) },
+    { h: 'Iluminación', num: true, f: r => `${r.lux} lx` },
+    { h: 'Última lectura', f: lastReading }
+  ]
+});
+
+/* ---------- Selección de salas (se guarda en este navegador) ---------- */
+const HIDDEN_KEY = 'wt_rooms_hidden';   // se guardan las salas ocultas, así las salas nuevas aparecen solas
+function loadHidden() {
+  try { hidden = new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]').map(String)); } catch (e) { hidden = new Set(); }
+}
+function saveHidden() {
+  try { localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hidden])); } catch (e) { /* sin almacenamiento */ }
+}
+function applySelection() {
+  rooms = allRooms.filter(r => !hidden.has(String(r.id)));
+}
+function renderPicker() {
+  const list = $('#roomsList');
+  if (!catalog.length) {
+    list.innerHTML = '<li class="muted">Cargando salas...</li>';
+    $('#roomsBtnLabel').textContent = 'Salas';
+    $('#roomsCount').textContent = '';
+    return;
+  }
+  const shown = catalog.filter(c => !hidden.has(String(c.id))).length;
+  list.innerHTML = catalog.map(c => {
+    const on = !hidden.has(String(c.id));
+    const last = on && shown === 1;      // siempre queda al menos una sala visible
+    return `<li><label class="check"><input type="checkbox" data-id="${esc(c.id)}"${on ? ' checked' : ''}${last ? ' disabled' : ''}><span class="box" aria-hidden="true"></span><span class="lbl">${esc(c.name)}</span></label></li>`;
+  }).join('');
+  $('#roomsBtnLabel').textContent = shown < catalog.length ? `Salas (${shown} de ${catalog.length})` : 'Salas';
+  $('#roomsCount').textContent = `${shown} de ${catalog.length}`;
+}
+function selectionChanged() {
+  saveHidden(); applySelection(); renderPicker(); render();
+}
+function showAll() { hidden.clear(); selectionChanged(); }
+function setPanel(open) {
+  $('#roomsPanel').hidden = !open;
+  $('#roomsBtn').setAttribute('aria-expanded', String(open));
+}
+
+/* ---------- Render ---------- */
+function render() {
+  destroyCharts();
+  const v = VIEWS[view];
+  $('#title').textContent = v.title;
+  $('#desc').textContent = v.desc;
+  $('#filters').hidden = view !== 'dashboard';
+  document.title = `${v.title} - Neat Pulse API`;
+  document.querySelectorAll('#nav a').forEach(a => {
+    if (a.dataset.view === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+  let notice = errorMsg ? `<div class="notice" role="alert">${state('Sin conexión', 'bad')}<span>${esc(errorMsg)}</span></div>` : '';
+  const miss = missing.filter(m => !hidden.has(String(m.id)));
+  if (miss.length) notice += `<div class="notice">${state('Sin lecturas', 'warn')}<span>Estas salas no devolvieron datos de sensor: ${miss.map(m => esc(m.name)).join(', ')}.</span></div>`;
+  const el = $('#view');
+  if (!allRooms.length) {
+    el.innerHTML = notice + (errorMsg ? '' : '<p class="empty">Cargando datos de las salas...</p>');
+    return;
+  }
+  if (!rooms.length) {
+    el.innerHTML = notice + '<article class="card"><p class="empty">No hay salas seleccionadas.</p><button type="button" class="btn" id="showAllBtn">Mostrar todas las salas</button></article>';
+    $('#showAllBtn').addEventListener('click', showAll);
+    return;
+  }
+  animating = animateNext && !reduceMotion;
+  el.innerHTML = notice + v.html();
+  if (v.mount) v.mount();
+  animateNext = false;
+}
+
+function tick() {
+  $('#status').textContent = lastUpdate
+    ? `Última actualización: ${fmtTime(lastUpdate)} (${ago(lastUpdate)})`
+    : 'Cargando datos...';
+}
+
+function setBusy(b) {
+  const btn = $('#refreshBtn');
+  btn.setAttribute('aria-busy', b ? 'true' : 'false');
+  btn.innerHTML = b
+    ? `${icon('refresh')}Actualizando...`
+    : `<span class="live" aria-hidden="true"></span>Actualizar ahora`;
+}
+
+async function refresh() {
+  if (busy) return;
+  busy = true; setBusy(true);
+  try {
+    const data = CONFIG.MOCK ? await fetchMock() : await fetchLive();
+    allRooms = data.map(prep);
+    pushHistory(allRooms);
+    applySelection();
+    renderPicker();
+    lastUpdate = Date.now() / 1000;
+    errorMsg = '';
+  } catch (e) {
+    errorMsg = `No se pudo actualizar: ${e.message || 'error de conexión'}.` + (allRooms.length ? ' Se muestran los últimos datos recibidos.' : '');
+  } finally {
+    busy = false; setBusy(false);
+  }
+  render(); tick();
+}
+
+function setAuto(on) {
+  auto = on;
+  $('#autoSwitch').setAttribute('aria-checked', String(on));
+  clearInterval(timer);
+  if (on) timer = setInterval(refresh, CONFIG.REFRESH_MS);
+}
+
+function route() {
+  const h = location.hash.slice(1);
+  view = VIEWS[h] ? h : 'dashboard';
+  window.scrollTo(0, 0);
+  animateNext = true;
+  render();
+}
+
+/* ---------- Inicio ---------- */
+function init() {
+  $('#nav').innerHTML = Object.keys(VIEWS).map(k => `<a href="#${k}" data-view="${k}">${icon(VIEWS[k].icon)}<span>${VIEWS[k].nav}</span></a>`).join('');
+  $('#autoLabel').textContent = `Actualizar cada ${Math.round(CONFIG.REFRESH_MS / 60000)} min`;
+  $('#mockTag').hidden = !CONFIG.MOCK;
+
+  loadHidden();
+  renderPicker();
+  $('#roomsBtn').addEventListener('click', () => setPanel($('#roomsPanel').hidden));
+  $('#roomsAll').addEventListener('click', showAll);
+  $('#roomsList').addEventListener('change', e => {
+    const cb = e.target.closest('input[data-id]');
+    if (!cb) return;
+    if (cb.checked) hidden.delete(cb.dataset.id); else hidden.add(cb.dataset.id);
+    selectionChanged();
+    const again = $(`#roomsList input[data-id="${cb.dataset.id}"]`);   // renderPicker recrea la lista: se devuelve el foco
+    if (again) again.focus();
+  });
+  document.addEventListener('click', e => { if (!$('#roomsPanel').hidden && !e.target.closest('.picker')) setPanel(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#roomsPanel').hidden) { setPanel(false); $('#roomsBtn').focus(); } });
+  $('#refreshBtn').addEventListener('click', refresh);
+  $('#autoSwitch').addEventListener('click', () => setAuto(!auto));
+  $('#filters').addEventListener('click', e => {
+    const b = e.target.closest('button[data-filter]');
+    if (!b) return;
+    filter = b.dataset.filter;
+    document.querySelectorAll('#filters button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    render();
+  });
+  window.addEventListener('hashchange', route);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && auto && lastUpdate && Date.now() / 1000 - lastUpdate > CONFIG.REFRESH_MS / 1000) refresh();
+  });
+  setInterval(tick, 15000);
+
+  Chart.defaults.font.family = "'Archivo', system-ui, sans-serif";
+  Chart.defaults.font.size = 13;
+  Chart.defaults.color = '#4A5468';
+
+  loadHistory();
+  route();
+  setAuto(true);
+  refresh();
+}
+init();
+})();
+</script>
+</body>
+</html>
