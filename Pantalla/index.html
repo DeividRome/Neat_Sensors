@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --bg:#E6ECF5; --ink:#0A1224; --muted:#4A5468; --blue:#043172; --cyan:#50E4FE;
@@ -18,30 +19,46 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 body.idle{cursor:none}
 h1,h2{font-family:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;margin:0}
 
-.screen{height:100vh;height:100dvh;display:flex;flex-direction:column;gap:2.2vh;padding:2.4vh 2.4vw}
+.screen{height:100vh;height:100dvh;display:flex;flex-direction:column;gap:1.8vmin;padding:2vmin 1.8vw}
 
 /* Encabezado */
-.top{flex:none;display:flex;align-items:center;justify-content:space-between;gap:2vw;min-height:7vh}
+.top{flex:none;display:flex;align-items:center;justify-content:space-between;gap:2vw;min-height:6vmin}
 .brand{display:flex;align-items:center;gap:2vw;min-width:0}
-.logo svg{height:5.4vh;width:auto;display:block;fill:var(--blue)}
+.logo svg{height:4.6vmin;width:auto;display:block;fill:var(--blue)}
 .title{display:flex;align-items:center;gap:1.6vw;min-width:0;flex-wrap:wrap}
-.title h1{font-size:max(3.6vh,18px);font-weight:600;line-height:1.1}
-.pill{display:inline-flex;align-items:center;padding:.7vh 1.4vw;border-radius:999px;box-shadow:inset .3vh .3vh .7vh var(--sh-d),inset -.3vh -.3vh .7vh var(--sh-l);font:600 max(1.9vh,13px) 'Space Grotesk',system-ui,sans-serif;color:var(--blue);white-space:nowrap}
+.title h1{font-size:max(3.2vmin,16px);font-weight:600;line-height:1.1}
+.pill{display:inline-flex;align-items:center;padding:.7vmin 1.4vw;border-radius:999px;box-shadow:inset .3vmin .3vmin .7vmin var(--sh-d),inset -.3vmin -.3vmin .7vmin var(--sh-l);font:600 max(1.9vmin,13px) 'Space Grotesk',system-ui,sans-serif;color:var(--blue);white-space:nowrap}
 .clock{text-align:right;flex:none}
-.clock b{display:block;font:600 max(5vh,24px)/1 'Space Grotesk',system-ui,sans-serif;font-variant-numeric:tabular-nums}
-.clock span{display:flex;align-items:center;justify-content:flex-end;gap:.8vh;margin-top:.6vh;color:var(--muted);font-size:max(1.7vh,12px);font-variant-numeric:tabular-nums}
-.live{width:1.1vh;height:1.1vh;min-width:8px;min-height:8px;border-radius:50%;background:var(--cyan);flex:none}
+.clock b{display:block;font:600 max(4.4vmin,22px)/1 'Space Grotesk',system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.clock span{display:flex;align-items:center;justify-content:flex-end;gap:.8vmin;margin-top:.6vmin;color:var(--muted);font-size:max(1.7vmin,12px);font-variant-numeric:tabular-nums}
+.live{width:1.1vmin;height:1.1vmin;min-width:8px;min-height:8px;border-radius:50%;background:var(--cyan);flex:none}
 .live.off{background:var(--gray)}
 
 /* Indicadores */
-.kpis{flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.8vw}
-.kpi{border-radius:2vh;background:var(--bg);box-shadow:.7vh .7vh 1.5vh var(--sh-d),-.7vh -.7vh 1.5vh var(--sh-l);padding:1.4vh 1.6vw;display:flex;flex-direction:column;justify-content:center;min-height:11vh}
-.kpi .l{color:var(--muted);font-size:max(1.8vh,13px);font-weight:500}
-.kpi .v{font:600 max(5.2vh,24px)/1.1 'Space Grotesk',system-ui,sans-serif;font-variant-numeric:tabular-nums;margin-top:.4vh}
+.kpis{flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.4vw}
+.kpi{border-radius:1.8vmin;background:var(--bg);box-shadow:.6vmin .6vmin 1.3vmin var(--sh-d),-.6vmin -.6vmin 1.3vmin var(--sh-l);padding:1vmin 1.3vw;display:flex;flex-direction:column;justify-content:center;min-height:8.5vmin}
+.kpi .l{color:var(--muted);font-size:max(1.6vmin,12px);font-weight:500}
+.kpi .v{font:600 max(4.2vmin,22px)/1.1 'Space Grotesk',system-ui,sans-serif;font-variant-numeric:tabular-nums;margin-top:.4vmin}
 .kpi .v small{font-size:.45em;color:var(--muted);font-weight:500;margin-left:.3em}
 
 /* Cartas de sala: el tamaño de letra (em) lo calcula el script según el espacio disponible */
-.grid{flex:1;min-height:0;display:flex;flex-wrap:wrap;justify-content:center;align-content:center}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:1.8vmin 1.6vw}
+.main.nocharts,.main.nodata{grid-template-columns:minmax(0,1fr)}
+.main.nocharts .charts,.main.nodata .charts{display:none}
+.grid{min-width:0;min-height:0;display:flex;flex-wrap:wrap;justify-content:center;align-content:center}
+
+/* Gráficas */
+.charts{min-width:0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:1.8vmin 1.2vw}
+.cc{min-width:0;min-height:0;display:flex;flex-direction:column;border-radius:1.8vmin;background:var(--bg);box-shadow:.6vmin .6vmin 1.3vmin var(--sh-d),-.6vmin -.6vmin 1.3vmin var(--sh-l);padding:1.4vmin 1.1vw}
+.cc h2{font-size:max(1.9vmin,13px);font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc p{margin:.3vmin 0 .8vmin;color:var(--muted);font-size:max(1.4vmin,11px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv{flex:1;min-height:0;position:relative}
+.wait{position:absolute;inset:0;margin:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:1vmin;color:var(--muted);font-size:max(1.5vmin,11px);border-radius:1.2vmin;box-shadow:inset .3vmin .3vmin .6vmin var(--sh-d),inset -.3vmin -.3vmin .6vmin var(--sh-l)}
+@media (orientation:portrait){
+  .main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1.5fr)}
+  .main.nocharts,.main.nodata{grid-template-rows:minmax(0,1fr)}
+  .charts{order:-1}
+}
 .rc{flex:none;background:var(--bg);border-radius:1.1em;box-shadow:.4em .4em .8em var(--sh-d),-.4em -.4em .8em var(--sh-l);padding:1em 1.1em;display:flex;flex-direction:column;overflow:hidden}
 .rc header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:.3em .6em}
 .rc h2{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-size:1.2em;line-height:1.2;font-weight:600}
@@ -63,12 +80,12 @@ h1,h2{font-family:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
 .rc.stale .well,.rc.stale dl{opacity:.5}
 
 /* Mensajes */
-.msg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1.4vh;color:var(--muted);padding:4vh 6vw}
-.msg strong{font:600 max(3.4vh,20px) 'Space Grotesk',system-ui,sans-serif;color:var(--ink)}
-.msg span{font-size:max(2.2vh,14px);max-width:60ch}
+.msg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1.4vmin;color:var(--muted);padding:4vmin 6vw}
+.msg strong{font:600 max(3.4vmin,20px) 'Space Grotesk',system-ui,sans-serif;color:var(--ink)}
+.msg span{font-size:max(2.2vmin,14px);max-width:60ch}
 
 @media (prefers-reduced-motion:no-preference){ .live:not(.off){animation:pulse 2.4s ease-out infinite} }
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(80,228,254,.55)}100%{box-shadow:0 0 0 .9vh rgba(80,228,254,0)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(80,228,254,.55)}100%{box-shadow:0 0 0 .9vmin rgba(80,228,254,0)}}
 </style>
 </head>
 <body>
@@ -84,7 +101,15 @@ h1,h2{font-family:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
     <div class="clock"><b id="clock">--:--</b><span><i class="live" id="live"></i><span id="status">Cargando datos...</span></span></div>
   </header>
   <section class="kpis" id="kpis" aria-label="Indicadores generales" hidden></section>
-  <main class="grid" id="grid" aria-label="Salas"></main>
+  <div class="main" id="main">
+    <main class="grid" id="grid" aria-label="Salas"></main>
+    <section class="charts" id="charts" aria-label="Gráficas">
+      <article class="cc"><h2>Personas en el tiempo</h2><p>Total en todas las salas</p><div class="cv" id="vPeople"></div></article>
+      <article class="cc"><h2>Temperatura y humedad</h2><p>Promedio de todas las salas</p><div class="cv" id="vTH"></div></article>
+      <article class="cc"><h2>Calidad del aire</h2><p>Salas por nivel</p><div class="cv" id="vAir"></div></article>
+      <article class="cc"><h2>Iluminación</h2><p>Promedio de todas las salas, en lux</p><div class="cv" id="vLux"></div></article>
+    </section>
+  </div>
 </div>
 
 <script>
@@ -95,6 +120,7 @@ h1,h2{font-family:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
 // Parámetros opcionales en la dirección:
 //   ?salas=22,4,5   solo esas salas (IDs)        ?cada=60    actualizar cada 60 s (mínimo 30)
 //   ?clave=XXXX     clave de acceso, si el Worker la exige (se guarda y se quita de la dirección)
+//   ?graficas=no    solo cartas de sala, sin gráficas
 //   ?demo           datos de ejemplo
 const qp = new URLSearchParams(location.search);
 const CONFIG = {
@@ -105,6 +131,8 @@ const CONFIG = {
   RELOAD_MS: 6 * 3600 * 1000,   // recarga la página cada 6 h para tomar actualizaciones y limpiar memoria
   TZ: 'America/Mexico_City'
 };
+const SHOW_CHARTS = qp.get('graficas') !== 'no';
+const REDUCE = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ONLY = (qp.get('salas') || '').split(',').map(x => x.trim()).filter(Boolean);
 const T = { tempMin: 20, tempMax: 27, humMin: 30, humMax: 60, vocGood: 100, vocWarn: 250, co2Good: 800, co2Warn: 1200, staleMin: 10 };
 
@@ -180,7 +208,122 @@ async function fetchRooms() {
   return ok;
 }
 
+/* ---------- Historial (alimenta las gráficas de tendencia) ---------- */
+// Se guarda en esta pantalla (hasta 6 h), así sobrevive a las recargas automáticas.
+const HKEY = 'wt_history_screen_v1', HMAX = 180;
+let hist = [];
+const rnd = (a, b) => a + Math.random() * (b - a);
+function seedHistory() {                   // solo ?demo: simula la última hora
+  const now = Math.floor(Date.now() / 1000);
+  let people = 12, temp = 25, hum = 48, lux = 230;
+  const out = [];
+  for (let i = 30; i >= 1; i--) {
+    people = Math.min(24, Math.max(0, people + Math.round(rnd(-2, 2))));
+    temp = Math.min(29, Math.max(21, temp + rnd(-0.3, 0.3)));
+    hum = Math.min(65, Math.max(35, hum + rnd(-1.2, 1.2)));
+    lux = Math.min(450, Math.max(80, lux + rnd(-25, 25)));
+    out.push({ t: now - i * 120, people, temp: +temp.toFixed(1), hum: +hum.toFixed(1), lux: Math.round(lux) });
+  }
+  hist = out;
+}
+function loadHistory() {
+  hist = [];
+  if (CONFIG.DEMO) { seedHistory(); return; }
+  try {
+    const raw = JSON.parse(localStorage.getItem(HKEY) || '[]');
+    const min = Date.now() / 1000 - 6 * 3600;
+    hist = Array.isArray(raw) ? raw.filter(x => x && x.t > min) : [];
+  } catch (e) { hist = []; }
+}
+function pushHistory(list) {
+  const fresh = list.filter(r => !isStale(r));
+  if (!fresh.length) return;
+  const avg = f => fresh.reduce((a, r) => a + f(r), 0) / fresh.length;
+  hist.push({ t: Math.floor(Date.now() / 1000), people: fresh.reduce((a, r) => a + r.people, 0), temp: +avg(r => r.temp).toFixed(1), hum: +avg(r => r.humidity).toFixed(1), lux: Math.round(avg(r => r.illumination)) });
+  if (hist.length > HMAX) hist = hist.slice(-HMAX);
+  if (!CONFIG.DEMO) { try { localStorage.setItem(HKEY, JSON.stringify(hist)); } catch (e) { /* sin almacenamiento */ } }
+}
+
+/* ---------- Gráficas ---------- */
+let charts = [], animateCharts = true, current = [];
+const destroyCharts = () => { charts.forEach(c => { try { c.stop(); c.destroy(); } catch (e) { /* */ } }); charts = []; };
+
+// Animación "progressive line with easing" de Chart.js: la línea se dibuja punto por punto
+function progressive(n) {
+  const ease = Chart.helpers.easingEffects.easeOutQuad;
+  const total = Math.min(2400, 900 + n * 30);
+  const duration = ctx => ease(ctx.index / n) * total / n;
+  const delay = ctx => ease(ctx.index / n) * total;
+  const previousY = ctx => {
+    const ch = ctx.chart, meta = ch.getDatasetMeta(ctx.datasetIndex);
+    const prev = ctx.index > 0 && meta && meta.data ? meta.data[ctx.index - 1] : null;
+    if (prev) return prev.getProps(['y'], true).y;
+    const d = ch.data.datasets[ctx.datasetIndex];
+    return ch.scales && ch.scales.y && d && d.data[0] ? ch.scales.y.getPixelForValue(d.data[0].y) : NaN;
+  };
+  return {
+    x: { type: 'number', easing: 'linear', duration, from: NaN, delay(ctx) { if (ctx.type !== 'data' || ctx.xStarted) return 0; ctx.xStarted = true; return delay(ctx); } },
+    y: { type: 'number', easing: 'linear', duration, from: previousY, delay(ctx) { if (ctx.type !== 'data' || ctx.yStarted) return 0; ctx.yStarted = true; return delay(ctx); } }
+  };
+}
+
+function lineCfg(datasets, o) {
+  const n = hist.length;
+  const yTicks = { maxTicksLimit: 5 };
+  if (o.int) yTicks.precision = 0;
+  return {
+    type: 'line', data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, events: [],
+      animation: o.anim ? progressive(n) : false,
+      plugins: { tooltip: { enabled: false }, legend: o.legend ? { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 22, padding: 10 } } : { display: false } },
+      scales: {
+        x: { type: 'linear', min: hist[0].t, max: hist[n - 1].t, grid: { display: false }, ticks: { maxTicksLimit: 4, callback: v => fmtHM(new Date(v * 1000)) } },
+        y: { beginAtZero: !!o.zero, suggestedMin: o.min, suggestedMax: o.max, ticks: yTicks, grid: { color: 'rgba(10,18,36,.08)' } }
+      }
+    }
+  };
+}
+
+function buildCharts() {
+  destroyCharts();
+  const ids = ['vPeople', 'vTH', 'vAir', 'vLux'];
+  if (!SHOW_CHARTS) return;
+  if (typeof Chart === 'undefined') { ids.forEach(id => { $('#' + id).innerHTML = '<p class="wait">Gráficas no disponibles</p>'; }); return; }
+
+  Chart.defaults.font.family = "'Archivo', system-ui, sans-serif";
+  const side = Math.min(innerHeight, innerWidth);
+  Chart.defaults.font.size = Math.max(10, Math.round(side * 0.013));
+  Chart.defaults.color = '#4A5468';
+  const lw = Math.max(2, Math.round(side * 0.0026));
+  const enough = hist.length >= 2;
+  const anim = animateCharts && !REDUCE;
+  const ds = (label, color, key, extra) => Object.assign({ label, data: hist.map(x => ({ x: x.t, y: x[key] })), borderColor: color, borderWidth: lw, pointRadius: 0, tension: 0.25 }, extra || {});
+  const mount = (id, make) => {
+    const box = $('#' + id);
+    if (!enough && id !== 'vAir') { box.innerHTML = '<p class="wait">Acumulando lecturas...</p>'; return; }
+    box.innerHTML = '<canvas></canvas>';
+    charts.push(new Chart(box.firstChild, make()));
+  };
+
+  mount('vPeople', () => lineCfg([ds('Personas', '#043172', 'people', { fill: true, backgroundColor: 'rgba(4,49,114,.08)' })], { anim, zero: true, int: true }));
+  mount('vTH', () => lineCfg([ds('Temperatura (°C)', '#E8710A', 'temp'), ds('Humedad (%)', '#1E88E5', 'hum')], { anim, legend: true, min: 15, max: 70 }));
+  mount('vLux', () => lineCfg([ds('Iluminación (lx)', '#0E9AA7', 'lux', { fill: true, backgroundColor: 'rgba(14,154,167,.08)' })], { anim, zero: true }));
+  mount('vAir', () => {
+    const cnt = { Bueno: 0, Regular: 0, Malo: 0, 'Sin dato': 0 };
+    current.forEach(r => cnt[r.air]++);
+    const keys = Object.keys(cnt).filter(k => k !== 'Sin dato' || cnt[k] > 0);
+    const col = { Bueno: '#2FBF7E', Regular: '#F2B441', Malo: '#E5484D', 'Sin dato': '#8A95A6' };
+    return { type: 'doughnut',
+      data: { labels: keys.map(k => `${k} (${cnt[k]})`), datasets: [{ data: keys.map(k => cnt[k]), backgroundColor: keys.map(k => col[k]), borderColor: '#E6ECF5', borderWidth: Math.max(2, lw) }] },
+      options: { responsive: true, maintainAspectRatio: false, events: [], cutout: '62%', animation: anim ? { duration: 700 } : false,
+        plugins: { tooltip: { enabled: false }, legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 10 } } } } };
+  });
+  if (enough) animateCharts = false;       // la animación de dibujo solo corre la primera vez
+}
+
 /* ---------- Estado y pantalla ---------- */
+const visible = () => ONLY.length ? rooms.filter(r => ONLY.includes(String(r.id))) : rooms;
 let rooms = [], lastOk = 0, failing = false, authError = false, timer = null, wake = null;
 
 function roomCard(r) {
@@ -205,11 +348,14 @@ function message(title, text) {
 }
 
 function render() {
-  const grid = $('#grid'), kp = $('#kpis');
-  let list = rooms;
-  if (ONLY.length) list = list.filter(r => ONLY.includes(String(r.id)));
+  const grid = $('#grid'), kp = $('#kpis'), main = $('#main');
+  const list = visible();
+  current = list;
+  main.classList.toggle('nocharts', !SHOW_CHARTS);
+  main.classList.toggle('nodata', !list.length);
 
   if (!list.length) {
+    destroyCharts();
     kp.hidden = true;
     grid.style.fontSize = '';
     if (authError) grid.innerHTML = message('Este panel requiere clave de acceso', 'Abre la dirección con ?clave=TU_CLAVE. Se guarda en esta pantalla y se quita de la dirección.');
@@ -232,6 +378,7 @@ function render() {
 
   grid.innerHTML = list.map(roomCard).join('');
   layout();
+  buildCharts();
 }
 
 /* Reparte el espacio: elige columnas y filas para que las cartas queden lo más grandes posible */
@@ -240,7 +387,7 @@ function layout() {
   const n = cards.length;
   if (!n) return;
   const W = grid.clientWidth, H = grid.clientHeight;
-  const gap = Math.round(Math.min(W, H) * 0.035);
+  const gap = Math.round(Math.min(W, H) * 0.03);
   const ratio = 1.3;                       // proporción ideal ancho/alto de una carta
   let best = null;
   for (let c = 1; c <= n; c++) {
@@ -269,6 +416,7 @@ async function refresh() {
   let next = CONFIG.EVERY_MS;
   try {
     rooms = (await fetchRooms()).map(prep);
+    pushHistory(visible());
     lastOk = Date.now(); failing = false; authError = false;
   } catch (e) {
     failing = true; authError = !!e.auth;
@@ -301,7 +449,9 @@ function init() {
   document.addEventListener('dblclick', toggleFullscreen);
   document.addEventListener('keydown', e => { if (e.key === 'f' || e.key === 'F') toggleFullscreen(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { keepAwake(); if (Date.now() - lastOk > CONFIG.EVERY_MS) refresh(); } });
-  window.addEventListener('resize', layout);
+  let rt;
+  window.addEventListener('resize', () => { layout(); clearTimeout(rt); rt = setTimeout(() => { animateCharts = false; if (current.length) buildCharts(); }, 300); });
+  loadHistory();
   keepAwake();
   tickClock();
   setInterval(tickClock, 15000);
