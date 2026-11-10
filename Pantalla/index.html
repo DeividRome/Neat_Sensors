@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Monitor de salas - Pantalla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E6ECF5; --ink:#0A1224; --muted:#4A5468; --blue:#043172; --cyan:#50E4FE;
+  --ok:#2FBF7E; --warn:#F2B441; --bad:#E5484D; --gray:#8A95A6;
+  --sh-d:#C3CDDD; --sh-l:#FFFFFF;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-text-size-adjust:100%}
+body.idle{cursor:none}
+h1,h2{font-family:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;margin:0}
+
+.screen{height:100vh;height:100dvh;display:flex;flex-direction:column;gap:2.2vh;padding:2.4vh 2.4vw}
+
+/* Encabezado */
+.top{flex:none;display:flex;align-items:center;justify-content:space-between;gap:2vw;min-height:7vh}
+.brand{display:flex;align-items:center;gap:2vw;min-width:0}
+.logo svg{height:5.4vh;width:auto;display:block;fill:var(--blue)}
+.title{display:flex;align-items:center;gap:1.6vw;min-width:0;flex-wrap:wrap}
+.title h1{font-size:max(3.6vh,18px);font-weight:600;line-height:1.1}
+.pill{display:inline-flex;align-items:center;padding:.7vh 1.4vw;border-radius:999px;box-shadow:inset .3vh .3vh .7vh var(--sh-d),inset -.3vh -.3vh .7vh var(--sh-l);font:600 max(1.9vh,13px) 'Space Grotesk',system-ui,sans-serif;color:var(--blue);white-space:nowrap}
+.clock{text-align:right;flex:none}
+.clock b{display:block;font:600 max(5vh,24px)/1 'Space Grotesk',system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.clock span{display:flex;align-items:center;justify-content:flex-end;gap:.8vh;margin-top:.6vh;color:var(--muted);font-size:max(1.7vh,12px);font-variant-numeric:tabular-nums}
+.live{width:1.1vh;height:1.1vh;min-width:8px;min-height:8px;border-radius:50%;background:var(--cyan);flex:none}
+.live.off{background:var(--gray)}
+
+/* Indicadores */
+.kpis{flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.8vw}
+.kpi{border-radius:2vh;background:var(--bg);box-shadow:.7vh .7vh 1.5vh var(--sh-d),-.7vh -.7vh 1.5vh var(--sh-l);padding:1.4vh 1.6vw;display:flex;flex-direction:column;justify-content:center;min-height:11vh}
+.kpi .l{color:var(--muted);font-size:max(1.8vh,13px);font-weight:500}
+.kpi .v{font:600 max(5.2vh,24px)/1.1 'Space Grotesk',system-ui,sans-serif;font-variant-numeric:tabular-nums;margin-top:.4vh}
+.kpi .v small{font-size:.45em;color:var(--muted);font-weight:500;margin-left:.3em}
+
+/* Cartas de sala: el tamaño de letra (em) lo calcula el script según el espacio disponible */
+.grid{flex:1;min-height:0;display:flex;flex-wrap:wrap;justify-content:center;align-content:center}
+.rc{flex:none;background:var(--bg);border-radius:1.1em;box-shadow:.4em .4em .8em var(--sh-d),-.4em -.4em .8em var(--sh-l);padding:1em 1.1em;display:flex;flex-direction:column;overflow:hidden}
+.rc header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:.3em .6em}
+.rc h2{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-size:1.2em;line-height:1.2;font-weight:600}
+.state{flex:none;display:inline-flex;align-items:center;gap:.4em;font-weight:600;font-size:.8em;white-space:nowrap}
+.state i{width:.65em;height:.65em;border-radius:50%;background:var(--ok);flex:none}
+.state.warn i{background:var(--warn)}
+.state.bad i{background:var(--bad)}
+.state.na i{background:var(--gray)}
+.body{flex:1;min-height:0;display:flex;align-items:center;gap:1em}
+.well{width:6.6em;height:6.6em;border-radius:50%;box-shadow:inset .3em .3em .6em var(--sh-d),inset -.3em -.3em .6em var(--sh-l);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
+.well b{font:600 3.1em/1 'Space Grotesk',system-ui,sans-serif;color:var(--blue);font-variant-numeric:tabular-nums}
+.well.empty b{color:var(--muted)}
+.well span{font-size:.75em;color:var(--muted)}
+.rc dl{margin:0;display:grid;gap:.45em;min-width:0;flex:1}
+.rc dt{color:var(--muted);font-size:.75em;line-height:1.1}
+.rc dd{margin:0;font:600 1.45em/1.15 'Space Grotesk',system-ui,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.4em;min-height:1.6em}
+.chips li{padding:.15em .7em;border-radius:999px;box-shadow:inset .15em .15em .3em var(--sh-d),inset -.15em -.15em .3em var(--sh-l);font-size:.7em;font-weight:600}
+.rc.stale .well,.rc.stale dl{opacity:.5}
+
+/* Mensajes */
+.msg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1.4vh;color:var(--muted);padding:4vh 6vw}
+.msg strong{font:600 max(3.4vh,20px) 'Space Grotesk',system-ui,sans-serif;color:var(--ink)}
+.msg span{font-size:max(2.2vh,14px);max-width:60ch}
+
+@media (prefers-reduced-motion:no-preference){ .live:not(.off){animation:pulse 2.4s ease-out infinite} }
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(80,228,254,.55)}100%{box-shadow:0 0 0 .9vh rgba(80,228,254,0)}}
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="top">
+    <div class="brand">
+      <div class="logo"><svg role="img" aria-label="West Telco" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 931.47 292.2">
+  <defs></defs>
+  <path class="cls-1" d="M78.41,85.98l4.45-4.45c4.51-4.51,11.83-4.51,16.34,0l4.45,4.45c2.26,2.26,5.22,3.39,8.18,3.38,2.96,0,5.92-1.13,8.18-3.38l4.45-4.45c4.51-4.51,11.83-4.51,16.35,0l4.45,4.45c2.26,2.26,5.22,3.39,8.18,3.38,2.96,0,5.92-1.12,8.18-3.38l4.45-4.45c4.51-4.51,11.83-4.51,16.35,0l4.45,4.45c4.51,4.51,11.83,4.51,16.34,0l4.45-4.45c4.51-4.51,4.51-11.83,0-16.34l-4.45-4.45c-4.51-4.51-11.83-4.51-16.35,0l-4.45,4.45c-4.51,4.51-11.83,4.51-16.34,0l-4.45-4.45c-2.54-2.54-5.97-3.65-9.29-3.33-2.58.24-5.1,1.35-7.08,3.33l-4.45,4.45c-4.51,4.51-11.83,4.51-16.34,0l-4.45-4.45c-2.82-2.82-6.74-3.88-10.38-3.17-2.19.42-4.28,1.48-5.98,3.18l-4.45,4.45c-4.51,4.51-11.83,4.51-16.34,0l-4.45-4.45c-4.51-4.51-11.83-4.51-16.34,0l-4.45,4.45c-4.51,4.51-4.51,11.83,0,16.34l4.45,4.45c4.51,4.51,11.83,4.51,16.34,0ZM272.14,154.51c-6.55-4.07-14.47-6.13-23.54-6.13s-16.84,2.06-23.45,6.13c-6.6,4.07-11.75,9.63-15.29,16.53-3.53,6.89-5.32,14.67-5.32,23.14s1.88,16.12,5.59,23.06c3.71,6.96,9,12.55,15.73,16.62,6.72,4.07,14.67,6.13,23.62,6.13,10.48,0,19.18-2.55,25.86-7.57,3.45-2.59,6.45-5.61,8.94-8.98,1.6-2.17,1.84-5,.63-7.4-1.22-2.41-3.55-3.84-6.25-3.84-2.28,0-4.44,1.14-5.76,3.05-2.09,3-4.76,5.57-7.94,7.65-4.09,2.67-9.24,4.03-15.3,4.03-5.73,0-10.82-1.24-15.15-3.7-4.33-2.45-7.84-5.81-10.41-9.97-2.47-4-4.09-8.46-4.82-13.25h73.39v-5.83c0-8.47-1.79-16.25-5.32-23.14-3.54-6.9-8.65-12.46-15.2-16.53ZM219.47,186.6c1.33-7.04,4.45-13.02,9.28-17.79,4.96-4.89,11.64-7.38,19.86-7.38s14.93,2.48,19.94,7.38c4.88,4.77,7.97,10.76,9.2,17.79h-58.28ZM870.4,132.72c-.34-.36-.77-.7-1.29-1,1.05-.15,1.84-.52,2.37-1.11.53-.58.79-1.33.79-2.22,0-.71-.18-1.34-.52-1.89-.35-.55-.81-.93-1.39-1.15-.58-.21-1.51-.32-2.78-.32h-5.09v11.96h2.42v-4.99h.49c.56,0,.96.04,1.22.14.26.09.5.25.73.5.23.24.65.83,1.27,1.76l1.75,2.6h2.89l-1.46-2.33c-.58-.93-1.04-1.58-1.38-1.94ZM866.69,130.09h-1.79v-3.04h1.89c.98,0,1.57.01,1.76.04.39.06.7.22.91.47.21.25.32.57.32.98,0,.36-.08.66-.24.9-.16.24-.39.41-.68.51-.29.1-1.01.15-2.17.15ZM867.21,120.91c-5.83,0-10.56,4.73-10.56,10.57s4.73,10.56,10.56,10.56,10.57-4.73,10.57-10.56-4.73-10.57-10.57-10.57ZM867.21,140.4c-4.92,0-8.93-4-8.93-8.93s4-8.93,8.93-8.93,8.93,4,8.93,8.93-4,8.93-8.93,8.93ZM361.04,192.08c-4.45-1.76-9.23-3.15-14.21-4.15-4.94-.99-9.68-2.05-14.09-3.15-4.36-1.09-7.95-2.57-10.7-4.39-2.66-1.77-3.96-4.26-3.96-7.6,0-8.11,6.64-12.06,20.3-12.06,7.19,0,12.41,1.31,15.51,3.9,1.97,1.65,3.42,3.52,4.31,5.56,1.12,2.56,3.62,4.21,6.37,4.21,2.46,0,4.69-1.26,5.97-3.37,1.27-2.09,1.36-4.63.24-6.79-.5-.96-1.06-1.91-1.68-2.83-2.56-3.81-6.35-6.97-11.27-9.4-4.91-2.42-11.34-3.65-19.1-3.65-11.41,0-20.17,2.25-26.03,6.69-5.91,4.48-8.9,10.85-8.9,18.95,0,5.5,1.47,9.91,4.36,13.1,2.85,3.15,6.58,5.62,11.09,7.34,4.45,1.7,9.22,3.09,14.2,4.15,4.86,1.03,9.61,2.12,14.1,3.24,4.36,1.09,7.95,2.63,10.68,4.56,2.67,1.89,3.97,4.5,3.97,7.95,0,2.77-.78,5.06-2.31,6.82-1.57,1.79-3.53,3.16-5.83,4.05-2.34.91-4.8,1.55-7.32,1.9-2.54.35-4.7.52-6.41.52-5.5,0-10.02-.84-13.43-2.49-3.39-1.64-5.94-3.81-7.57-6.45-.8-1.29-1.45-2.62-1.94-3.96-1.06-2.88-3.81-4.82-6.84-4.82-2.46,0-4.74,1.23-6.1,3.29-1.36,2.06-1.59,4.64-.62,6.9.73,1.71,1.64,3.38,2.71,4.99,2.96,4.45,7.32,8.08,12.94,10.8,5.61,2.71,12.56,4.09,20.68,4.09,10.94,0,19.81-2.31,26.37-6.85,6.62-4.59,9.98-11.33,9.98-20.02,0-5.61-1.46-10.13-4.35-13.44-2.85-3.27-6.58-5.83-11.09-7.61ZM203.46,124.29c-1.37-1.85-3.47-2.92-5.77-2.92-3.17,0-5.93,2.04-6.85,5.07l-27.92,91.32-25.53-61.74,4.39-13.65.08.26,3.89-11.99c.71-2.18.34-4.5-1.01-6.36-1.35-1.86-3.44-2.92-5.74-2.92-3.1,0-5.81,1.98-6.76,4.93l-29.21,91.24-27.85-91.1c-.93-3.03-3.68-5.07-6.86-5.07-2.3,0-4.41,1.06-5.77,2.92s-1.76,4.18-1.07,6.38l31.63,101.65c1.17,3.76,4.6,6.28,8.53,6.28h2.65c3.89,0,7.31-2.49,8.5-6.2l5.49-17.04,11.87-36.88,22.66,52.66c1.43,4.46,5.54,7.45,10.23,7.45s8.85-3.03,10.26-7.55l31.23-100.38c.68-2.2.29-4.52-1.07-6.38ZM560.51,128.16c0-3.75-3.05-6.79-6.79-6.79h-81.72c-3.75,0-6.79,3.05-6.79,6.79s3.05,6.79,6.79,6.79h33.72v96.5c0,3.94,3.2,7.14,7.14,7.14s7.14-3.2,7.14-7.14v-96.5h33.72c3.75,0,6.79-3.05,6.79-6.79ZM614.17,154.51c-6.55-4.07-14.47-6.13-23.54-6.13s-16.84,2.06-23.45,6.13c-6.61,4.07-11.75,9.63-15.29,16.53-3.53,6.89-5.32,14.68-5.32,23.14s1.88,16.12,5.59,23.06c3.71,6.96,9,12.55,15.73,16.62,6.72,4.07,14.67,6.13,23.62,6.13,10.49,0,19.18-2.55,25.86-7.57,3.44-2.59,6.45-5.61,8.94-8.98,1.6-2.17,1.84-5,.63-7.4-1.21-2.41-3.55-3.84-6.25-3.84-2.28,0-4.43,1.14-5.76,3.05-2.09,3-4.76,5.58-7.94,7.65-4.09,2.67-9.24,4.03-15.3,4.03-5.73,0-10.82-1.24-15.15-3.7-4.34-2.45-7.84-5.81-10.41-9.97-2.47-4-4.09-8.45-4.83-13.25h73.39v-5.83c0-8.47-1.79-16.26-5.32-23.14-3.54-6.9-8.65-12.46-15.2-16.53ZM561.5,186.6c1.33-7.04,4.45-13.02,9.28-17.79,4.96-4.89,11.64-7.38,19.86-7.38s14.93,2.48,19.95,7.38c4.88,4.77,7.97,10.75,9.2,17.79h-58.28ZM753.85,209.93c-2.55,0-4.94,1.43-6.22,3.73-1.9,3.4-4.51,6.31-7.77,8.65-4.26,3.07-9.49,4.63-15.54,4.63s-11.86-1.5-16.53-4.47c-4.68-2.97-8.33-7-10.84-11.97-2.52-4.98-3.8-10.47-3.8-16.32s1.28-11.48,3.8-16.4c2.51-4.91,6.16-8.91,10.85-11.88,4.68-2.97,10.24-4.47,16.53-4.47s11.27,1.56,15.54,4.63c3.25,2.34,5.87,5.25,7.77,8.66,1.28,2.3,3.67,3.73,6.22,3.73s4.95-1.38,6.21-3.68c1.28-2.34,1.18-5.08-.27-7.34-2.65-4.12-6.12-7.78-10.32-10.87-7.38-5.43-16.43-8.18-26.9-8.18-8.84,0-16.61,2.06-23.1,6.13-6.49,4.07-11.6,9.63-15.19,16.53-3.59,6.88-5.41,14.67-5.41,23.15s1.82,16.12,5.41,23.06c3.59,6.96,8.71,12.55,15.2,16.62,6.49,4.07,14.26,6.14,23.1,6.14,10.48,0,19.53-2.75,26.9-8.18,4.2-3.09,7.67-6.75,10.32-10.87,1.45-2.25,1.55-5,.27-7.34-1.26-2.31-3.58-3.68-6.21-3.68ZM839.16,154.51c-6.55-4.07-14.47-6.13-23.54-6.13s-16.84,2.06-23.45,6.13c-6.61,4.07-11.75,9.63-15.29,16.53-3.53,6.89-5.32,14.68-5.32,23.14s1.79,16.11,5.32,23.05c3.54,6.96,8.68,12.55,15.29,16.62,6.61,4.07,14.5,6.13,23.45,6.13s16.98-2.06,23.54-6.13c6.55-4.07,11.66-9.66,15.2-16.62,3.53-6.94,5.32-14.7,5.32-23.05s-1.79-16.26-5.32-23.14c-3.54-6.9-8.65-12.46-15.2-16.53ZM841.94,210.52c-2.28,4.96-5.67,8.99-10.06,11.96-4.38,2.96-9.85,4.46-16.25,4.46s-11.73-1.5-16.17-4.46c-4.45-2.97-7.86-6.99-10.15-11.95-2.29-4.99-3.46-10.48-3.46-16.33s1.16-11.49,3.45-16.42c2.28-4.9,5.7-8.9,10.15-11.87,4.45-2.96,9.89-4.46,16.17-4.46s11.87,1.5,16.25,4.46c4.4,2.97,7.78,6.97,10.06,11.87,2.29,4.93,3.45,10.46,3.45,16.42s-1.16,11.35-3.46,16.33ZM656.83,120.34c-3.94,0-7.14,3.2-7.14,7.14v103.97c0,3.94,3.2,7.14,7.14,7.14s7.14-3.2,7.14-7.14v-103.97c0-3.94-3.2-7.14-7.14-7.14ZM427.14,149.18h-13.14v-22.38c-.11-3.2-2.67-6.11-6.1-6.92-1.93-.47-4.08-.14-5.84.95-2.3,1.42-3.75,3.76-3.78,6.09,0,.04,0,.07,0,.21v22.05h-10.77c-3.5.03-6.51,2.6-7.01,5.97-.05.31-.08.65-.08,1.02s.03.7.08,1.01c.5,3.33,3.36,5.84,6.79,5.96h10.98v55.94c0,4.19.68,7.96,2.01,11.2,1.19,2.97,2.89,5.27,5.07,6.82,2.12,1.51,4.63,2.48,7.46,2.89,2.66.36,5.41.54,8.17.54h1.73s.2,0,.2,0c3.94-.12,7.02-3.22,7.02-7.06s-3.07-6.96-7-7.07l-.02.57h0l-.06-.57h-.15c-1.07,0-2.35-.03-3.68-.18-.26-.03-.51-.07-.77-.11l-.29-.05c-.38-.05-.74-.12-1.11-.19-.67-.11-1.22-.38-1.67-.82-.42-.4-.79-1.17-1.07-2.22-.23-.94-.2-2.23-.17-3.86.01-.63.03-1.3.03-2.01v-53.82h13.12c3.86-.09,7-3.22,7-6.97s-3.06-6.9-6.98-6.99ZM387.52,149.75h0s0,0,0,0h0Z"></path>
+</svg></div>
+      <div class="title"><h1>Monitor de salas</h1><span class="pill">Neat Pulse API</span></div>
+    </div>
+    <div class="clock"><b id="clock">--:--</b><span><i class="live" id="live"></i><span id="status">Cargando datos...</span></span></div>
+  </header>
+  <section class="kpis" id="kpis" aria-label="Indicadores generales" hidden></section>
+  <main class="grid" id="grid" aria-label="Salas"></main>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+/* ---------- Configuración ---------- */
+// Parámetros opcionales en la dirección:
+//   ?salas=22,4,5   solo esas salas (IDs)        ?cada=60    actualizar cada 60 s (mínimo 30)
+//   ?clave=XXXX     clave de acceso, si el Worker la exige (se guarda y se quita de la dirección)
+//   ?demo           datos de ejemplo
+const qp = new URLSearchParams(location.search);
+const CONFIG = {
+  DEMO: qp.has('demo'),
+  API_URL: 'https://neat-pulse-proxy.david-jonas1094.workers.dev/rooms',
+  EVERY_MS: Math.max(30, Number(qp.get('cada')) || 120) * 1000,
+  RETRY_MS: 20000,
+  RELOAD_MS: 6 * 3600 * 1000,   // recarga la página cada 6 h para tomar actualizaciones y limpiar memoria
+  TZ: 'America/Mexico_City'
+};
+const ONLY = (qp.get('salas') || '').split(',').map(x => x.trim()).filter(Boolean);
+const T = { tempMin: 20, tempMax: 27, humMin: 30, humMax: 60, vocGood: 100, vocWarn: 250, co2Good: 800, co2Warn: 1200, staleMin: 10 };
+
+(function takeKeyFromUrl() {
+  const k = qp.get('clave');
+  if (!k) return;
+  try { localStorage.setItem('wt_access_key', k); } catch (e) { /* sin almacenamiento */ }
+  qp.delete('clave');
+  const rest = qp.toString();
+  try { history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash); } catch (e) { /* */ }
+})();
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- Reglas (las mismas del dashboard) ---------- */
+const fmtHM = d => d.toLocaleTimeString('es-MX', { timeZone: CONFIG.TZ, hour: '2-digit', minute: '2-digit', hour12: false });
+const fmtHMS = d => d.toLocaleTimeString('es-MX', { timeZone: CONFIG.TZ, hour12: false });
+const ageMin = ts => Math.max(0, (Date.now() / 1000 - ts) / 60);
+const isStale = r => ageMin(r.ts) > T.staleMin;
+const airLabel = v => v <= T.vocGood ? 'Bueno' : v <= T.vocWarn ? 'Regular' : 'Malo';
+const co2Label = v => v <= T.co2Good ? 'Bueno' : v <= T.co2Warn ? 'Regular' : 'Malo';
+const airCls = l => l === 'Bueno' ? '' : l === 'Regular' ? 'warn' : l === 'Malo' ? 'bad' : 'na';
+const state = (label, cls) => `<span class="state ${cls}"><i></i>${label}</span>`;
+
+function prep(r) {
+  const vocI = Math.round(r.vocIndex || 0), co2 = Math.round(r.co2 || 0);
+  let air = 'Sin dato', airMetric = 'Calidad del aire', airText = 'Sin dato';
+  if (vocI > 0) { air = airLabel(vocI); airMetric = 'VOC Index'; airText = String(vocI); }
+  else if (co2 > 0) { air = co2Label(co2); airMetric = 'CO₂'; airText = co2 + ' ppm'; }
+  return Object.assign({}, r, { t: Math.round(r.temp), h: Math.round(r.humidity), air, airMetric, airText });
+}
+function alertsOf(r) {
+  const a = [];
+  if (isStale(r)) a.push('Sin datos recientes');
+  if (r.t < T.tempMin) a.push('Temperatura baja'); else if (r.t > T.tempMax) a.push('Temperatura alta');
+  if (r.h < T.humMin) a.push('Humedad baja'); else if (r.h > T.humMax) a.push('Humedad alta');
+  if (r.air === 'Regular') a.push('Aire regular'); else if (r.air === 'Malo') a.push('Aire malo');
+  return a;
+}
+
+/* ---------- Datos ---------- */
+function normalizeRoom(r) {
+  const block = r.roomData || r.endpointData;
+  const d = block && block.data && block.data[0];
+  if (!d) throw new Error('sin datos de sensor');
+  return { id: r.id, name: r.name, ts: Number(d.timestamp), temp: d.temp, humidity: d.humidity, vocIndex: d.vocIndex, co2: d.co2, illumination: d.illumination, people: d.people };
+}
+function demoData() {
+  const now = Math.floor(Date.now() / 1000);
+  const mk = (id, name, off, temp, hum, co2, vocIndex, people) => ({ id, name, ts: now - off, temp, humidity: hum, co2, vocIndex, illumination: 200, people });
+  return [
+    mk(22, 'Neat Board32 GDL', 30, 25.2, 51.4, 0, 70, 1),
+    mk(19, 'Neat Diego', 25, 24.8, 47, 0, 66, 0),
+    mk(10, 'Neat Frame Kiosk', 120, 23.4, 49.2, 0, 40, 0),
+    mk(4, 'Sala Brasil GDL', 50, 23.6, 32.1, 580, 0, 2),
+    mk(5, 'Sala México GDL', 20, 27.8, 66, 1350, 0, 6),
+    mk(15, 'Sala Movil MX', 15, 20.5, 54.3, 455, 0, 0),
+    mk(6, 'Sala Training GDL', 1100, 24.1, 45, 0, 160, 3)
+  ];
+}
+async function fetchRooms() {
+  if (CONFIG.DEMO) return demoData();
+  let key = '';
+  try { key = localStorage.getItem('wt_access_key') || ''; } catch (e) { /* */ }
+  const res = await fetch(CONFIG.API_URL, { headers: key ? { 'X-Access-Key': key } : {} });
+  if (res.status === 401) { const err = new Error('clave'); err.auth = true; throw err; }
+  if (!res.ok) throw new Error('respuesta ' + res.status);
+  const json = await res.json();
+  const ok = [];
+  (json.rooms || []).forEach(r => { try { ok.push(normalizeRoom(r)); } catch (e) { /* sala sin sensores: no se muestra */ } });
+  if (!ok.length) throw new Error('ninguna sala devolvió datos');
+  return ok;
+}
+
+/* ---------- Estado y pantalla ---------- */
+let rooms = [], lastOk = 0, failing = false, authError = false, timer = null, wake = null;
+
+function roomCard(r) {
+  const al = alertsOf(r), shown = al.slice(0, 2), more = al.length - shown.length;
+  const chips = shown.map(x => `<li>${x}</li>`).join('') + (more > 0 ? `<li>+${more}</li>` : '');
+  return `<article class="rc${isStale(r) ? ' stale' : ''}">
+    <header><h2>${esc(r.name)}</h2>${state(r.air === 'Sin dato' ? 'Aire sin dato' : 'Aire ' + r.air.toLowerCase(), airCls(r.air))}</header>
+    <div class="body">
+      <div class="well${r.people ? '' : ' empty'}"><b>${r.people}</b><span>${r.people === 1 ? 'persona' : 'personas'}</span></div>
+      <dl>
+        <div><dt>Temperatura</dt><dd>${r.t} °C</dd></div>
+        <div><dt>Humedad</dt><dd>${r.h} %</dd></div>
+        <div><dt>${esc(r.airMetric)}</dt><dd>${esc(r.airText)}</dd></div>
+      </dl>
+    </div>
+    <ul class="chips">${chips}</ul>
+  </article>`;
+}
+
+function message(title, text) {
+  return `<div class="msg"><strong>${title}</strong><span>${text}</span></div>`;
+}
+
+function render() {
+  const grid = $('#grid'), kp = $('#kpis');
+  let list = rooms;
+  if (ONLY.length) list = list.filter(r => ONLY.includes(String(r.id)));
+
+  if (!list.length) {
+    kp.hidden = true;
+    grid.style.fontSize = '';
+    if (authError) grid.innerHTML = message('Este panel requiere clave de acceso', 'Abre la dirección con ?clave=TU_CLAVE. Se guarda en esta pantalla y se quita de la dirección.');
+    else if (failing) grid.innerHTML = message('No se pudo conectar con el servidor', 'Se vuelve a intentar automáticamente.');
+    else grid.innerHTML = message('Cargando datos de las salas...', '');
+    return;
+  }
+
+  const people = list.reduce((a, r) => a + r.people, 0);
+  const occ = list.filter(r => r.people > 0).length;
+  const avgT = Math.round(list.reduce((a, r) => a + r.temp, 0) / list.length);
+  const avgH = Math.round(list.reduce((a, r) => a + r.humidity, 0) / list.length);
+  kp.hidden = false;
+  kp.innerHTML = [
+    ['Personas ahora', people, ''],
+    ['Salas ocupadas', occ, `de ${list.length}`],
+    ['Temperatura promedio', avgT, '°C'],
+    ['Humedad promedio', avgH, '%']
+  ].map(k => `<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}${k[2] ? `<small>${k[2]}</small>` : ''}</div></div>`).join('');
+
+  grid.innerHTML = list.map(roomCard).join('');
+  layout();
+}
+
+/* Reparte el espacio: elige columnas y filas para que las cartas queden lo más grandes posible */
+function layout() {
+  const grid = $('#grid'), cards = grid.querySelectorAll('.rc');
+  const n = cards.length;
+  if (!n) return;
+  const W = grid.clientWidth, H = grid.clientHeight;
+  const gap = Math.round(Math.min(W, H) * 0.035);
+  const ratio = 1.3;                       // proporción ideal ancho/alto de una carta
+  let best = null;
+  for (let c = 1; c <= n; c++) {
+    const r = Math.ceil(n / c);
+    const cw = (W - gap * (c - 1)) / c, ch = (H - gap * (r - 1)) / r;
+    const score = Math.min(cw, ch * ratio);
+    if (!best || score > best.score) best = { cw, ch, score };
+  }
+  const u = Math.max(8, Math.min(best.cw / 18.5, best.ch / 14, 52));   // tamaño de letra base en px
+  grid.style.fontSize = u + 'px';
+  grid.style.gap = gap + 'px';
+  cards.forEach(el => { el.style.width = Math.floor(best.cw) + 'px'; el.style.height = Math.floor(best.ch) + 'px'; });
+}
+
+function tickClock() {
+  $('#clock').textContent = fmtHM(new Date());
+  const live = $('#live'), st = $('#status');
+  if (!lastOk) { st.textContent = failing ? 'Sin conexión' : 'Cargando datos...'; live.className = 'live off'; return; }
+  const staleData = (Date.now() - lastOk) > 5 * 60 * 1000;
+  live.className = 'live' + (failing && staleData ? ' off' : '');
+  st.textContent = (failing && staleData ? 'Sin conexión. Datos de las ' : 'Actualizado ') + fmtHMS(new Date(lastOk));
+}
+
+async function refresh() {
+  clearTimeout(timer);
+  let next = CONFIG.EVERY_MS;
+  try {
+    rooms = (await fetchRooms()).map(prep);
+    lastOk = Date.now(); failing = false; authError = false;
+  } catch (e) {
+    failing = true; authError = !!e.auth;
+    next = CONFIG.RETRY_MS;
+  }
+  render(); tickClock();
+  timer = setTimeout(refresh, next);
+}
+
+/* ---------- Comportamiento de pantalla ---------- */
+async function keepAwake() {              // evita que la pantalla se apague, donde el navegador lo permite
+  try { if ('wakeLock' in navigator) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } } catch (e) { /* */ }
+}
+function toggleFullscreen() {
+  const d = document;
+  if (d.fullscreenElement) { d.exitFullscreen(); return; }
+  const el = d.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+}
+let idleTimer;
+function wakeCursor() {
+  document.body.classList.remove('idle');
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => document.body.classList.add('idle'), 3000);
+}
+
+function init() {
+  wakeCursor();
+  document.addEventListener('mousemove', wakeCursor);
+  document.addEventListener('dblclick', toggleFullscreen);
+  document.addEventListener('keydown', e => { if (e.key === 'f' || e.key === 'F') toggleFullscreen(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { keepAwake(); if (Date.now() - lastOk > CONFIG.EVERY_MS) refresh(); } });
+  window.addEventListener('resize', layout);
+  keepAwake();
+  tickClock();
+  setInterval(tickClock, 15000);
+  setTimeout(() => location.reload(), CONFIG.RELOAD_MS);
+  render();
+  refresh();
+}
+init();
+})();
+</script>
+</body>
+</html>
